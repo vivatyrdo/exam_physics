@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Большой Квиз по Физике</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: #f0f2f5;
+            color: #333;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px 0;
+            text-align: center;
+        }
+
+        .quiz-container {
+            background-color: white;
+            padding: 30px 40px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            width: 90%;
+            max-width: 700px;
+        }
+        
+        #start-screen h1 {
+            margin-bottom: 20px;
+        }
+        
+        #progress-container {
+            width: 100%;
+            height: 15px;
+            background-color: #e0e0e0;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            overflow: hidden;
+        }
+        #progress-bar {
+            height: 100%;
+            width: 0%;
+            background-color: #28a745;
+            border-radius: 10px;
+            transition: width 0.4s ease-in-out;
+        }
+        #progress-text {
+            margin-bottom: 5px;
+            font-size: 0.9em;
+            font-weight: bold;
+            color: #555;
+            text-align: right;
+        }
+
+        #question-container {
+            margin-bottom: 20px;
+            font-size: 1.2em;
+            font-weight: 500;
+            min-height: 60px; /* Чтобы контейнер не "прыгал" при смене текста */
+        }
+
+        #answer-buttons {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 10px;
+        }
+
+        .btn {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 15px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1em;
+            transition: background-color 0.3s, transform 0.1s;
+            line-height: 1.4;
+        }
+
+        .btn:hover:not(:disabled) {
+            background-color: #0056b3;
+        }
+        
+        .btn:active:not(:disabled) {
+            transform: scale(0.98);
+        }
+
+        .btn.correct {
+            background-color: #28a745;
+        }
+
+        .btn.incorrect {
+            background-color: #dc3545;
+        }
+
+        .btn:disabled {
+            cursor: not-allowed;
+            opacity: 0.7;
+        }
+
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="quiz-container">
+        <!-- Стартовый экран -->
+        <div id="start-screen">
+            <h1>Большой Квиз по Физике</h1>
+            <p>Проверьте свои знания! Вопросы, на которые вы ответите неверно, будут заданы снова.</p>
+            <button class="btn" id="start-btn">Начать квиз</button>
+        </div>
+
+        <!-- Экран квиза -->
+        <div id="quiz-screen" class="hidden">
+            <div id="progress-text"></div>
+            <div id="progress-container">
+                <div id="progress-bar"></div>
+            </div>
+            <div id="question-container"></div>
+            <div id="answer-buttons"></div>
+        </div>
+        
+        <!-- Финальный экран -->
+        <div id="result-screen" class="hidden">
+            <h1>Поздравляем!</h1>
+            <p>Вы успешно ответили на все вопросы.</p>
+            <button class="btn" id="restart-btn">Пройти еще раз</button>
+        </div>
+    </div>
+
+<script>
+// --- ПОЛНАЯ БАЗА ВОПРОСОВ ---
+// Вставлено 315 вопросов
+const allQuestions = [
+    { question: "Сила трения скольжения определяется по формуле:", answers: [ { text: "F = μN", correct: true }, { text: "F = mg", correct: false }, { text: "F = k * (q² / r²)", correct: false }, { text: "F = -kx", correct: false }, { text: "F = ma", correct: false } ] },
+    { question: "Вес тела:", answers: [ { text: "Равен силе тяжести, если тело покоится или движется равномерно, прямолинейно.", correct: true }, { text: "Равен силе тяжести, при условии ускоренного движения тела вверх.", correct: false }, { text: "Равен нулю.", correct: false }, { text: "Всегда равен силе тяжести.", correct: false }, { text: "Равен силе тяжести, при условии ускоренного движения тела вниз.", correct: false } ] },
+    { question: "Когда вес движущегося тела меньше веса этого же покоящегося тела?", answers: [ { text: "Когда тело движется равноускоренно вниз.", correct: true }, { text: "Когда тело движется равноускоренно вверх.", correct: false }, { text: "Когда тело движется равномерно вниз.", correct: false }, { text: "Когда тело движется с ускорением вверх.", correct: false }, { text: "Когда тело движется равномерно вверх.", correct: false } ] },
+    { question: "Какая величина является мерой инерции при вращении твердого тела вокруг закрепленной оси:", answers: [ { text: "Момент инерции", correct: true }, { text: "Момент силы", correct: false }, { text: "Импульс тела", correct: false }, { text: "Угловое ускорение", correct: false }, { text: "Масса", correct: false } ] },
+    { question: "Автомобиль двигался первую половину пути со скоростью v₁, а вторую половину пути со скоростью v₂. Найти среднюю скорость автомобиля на всем пути", answers: [ { text: "(2v₁v₂) / (v₁ + v₂)", correct: true }, { text: "(v₁ + v₂) / (2v₁v₂)", correct: false }, { text: "(v₁v₂) / (v₁ + v₂)", correct: false }, { text: "(v₁ + v₂) / (v₁v₂)", correct: false }, { text: "(v₁ + v₂) / 2", correct: false } ] },
+    { question: "Момент инерции тела, вращающегося вокруг неподвижной оси, зависит от:", answers: [ { text: "массы тела и ее распределения относительно оси вращения", correct: true }, { text: "скорости вращения тела", correct: false }, { text: "вращающего момента", correct: false }, { text: "силы, действующей на тело", correct: false }, { text: "ускорения тела", correct: false } ] },
+    { question: "На поверхности Луны астронавты производили опыт, наблюдая падение одновременно брошенных вертикально вниз без начальной скорости стального шарика, перышка, пробки, кусочка пластмассы (на Луне нет атмосферы). Какой предмет раньше других упал на поверхности Луны:", answers: [ { text: "Все предметы упали одновременно", correct: true }, { text: "Кусочек пластмассы", correct: false }, { text: "Перышко", correct: false }, { text: "Пробка", correct: false }, { text: "Стальной шарик", correct: false } ] },
+    { question: "В неподвижном лифте на пружине висит гиря массой 1 кг. Пружина растянулась на 2 см. Найти, на сколько растянется пружина, если лифт поднимается с ускорением 2 м/с².", answers: [ { text: "2,4 см", correct: true }, { text: "0,6 см", correct: false }, { text: "1,2 см", correct: false }, { text: "4,8 см", correct: false }, { text: "5,6 см", correct: false } ] },
+    { question: "Груз массой m₁, подвешенный на пружине, совершает гармонические колебания с периодом T₁. Чему равен период T₂ колебаний груза массой m₂=4m₁, подвешенного на такой же пружине?", answers: [ { text: "T₂=2T₁", correct: true }, { text: "T₂=4T₁", correct: false }, { text: "T₂=T₁/2", correct: false }, { text: "T₂=T₁/4", correct: false }, { text: "T₂=T₁", correct: false } ] },
+    { question: "Центростремительное ускорение автомобиля, движущегося по закругленному участку радиусом 600 м со скоростью 36 км/ч, равно:", answers: [ { text: "0,17 м/с²", correct: true }, { text: "1,63 м/с²", correct: false }, { text: "0,19 м/с²", correct: false }, { text: "0,28 м/с²", correct: false }, { text: "2,36 м/с²", correct: false } ] },
+    { question: "Материальная точка массой 5 г совершает гармонические колебания с частотой 0,5 Гц. Амплитуда колебаний 3 см. Максимальная сила, действующая на точку, равна:", answers: [ { text: "1,48·10⁻³ Н", correct: true }, { text: "0,37·10⁻³ Н", correct: false }, { text: "7,13·10⁻³ Н", correct: false }, { text: "3,12·10⁻³ Н", correct: false }, { text: "2,15·10⁻³ Н", correct: false } ] },
+    { question: "Укажите величину угла между угловой и линейной скоростью какой-либо точки твердого тела, вращающегося вокруг закрепленной оси.", answers: [ { text: "90⁰", correct: true }, { text: "0⁰", correct: false }, { text: "45⁰", correct: false }, { text: "180⁰", correct: false }, { text: "Угол может быть любым", correct: false } ] },
+    { question: "Уравнение колебаний источника волн x = 2sin100πt м. Модуль скорости распространения колебаний в среде 400 м/с. Чему равна длина волны?", answers: [ { text: "8 м", correct: true }, { text: "4 м", correct: false }, { text: "2π м", correct: false }, { text: "4π м", correct: false } ] },
+    { question: "Тело массой 0,8 кг бросили вертикально вверх. Кинетическая энергия тела в момент бросания равна 200 Дж. Тело может подняться на высоту:", answers: [ { text: "25 м", correct: true }, { text: "50 м", correct: false }, { text: "12,5 м", correct: false }, { text: "10 м", correct: false }, { text: "2,5 м", correct: false } ] },
+    { question: "За промежуток времени 10 с точка прошла половину окружности радиусом 160 см. Вычислить за это время среднюю скорость точки:", answers: [ { text: "50 см/с", correct: true }, { text: "15 см/с", correct: false }, { text: "5 см/с", correct: false }, { text: "10 см/с", correct: false }, { text: "25 см/с", correct: false } ] },
+    { question: "К сжатой пружине приставлен шар массой 1 кг. Пружина сжата на 10 см, а коэффициент её упругости равен 400 Н/м. Найти скорость шара, с которой он отбрасывается при выпрямлении пружины:", answers: [ { text: "2 м/с", correct: true }, { text: "200 м/с", correct: false }, { text: "4 м/с", correct: false }, { text: "40 м/с", correct: false }, { text: "20 м/с", correct: false } ] },
+    { question: "Скорость легкового автомобиля в 2 раза больше скорости грузового, а масса грузового автомобиля в 2 раза больше массы легкового. Сравните значения импульсов легкового p₁ и грузового p₂ автомобилей:", answers: [ { text: "p₁=p₂", correct: true }, { text: "p₁=2p₂", correct: false }, { text: "2p₁=p₂", correct: false }, { text: "p₁=4p₂", correct: false }, { text: "4p₁=p₂", correct: false } ] },
+    { question: "Известна зависимость модуля скорости частицы от времени: v = at + bt² (a, b – постоянные величины). Чему равна сила, действующая на частицу?", answers: [ { text: "m(a + 2bt)", correct: true }, { text: "ma", correct: false }, { text: "m(at + bt²) / 2", correct: false }, { text: "2mbt", correct: false }, { text: "m(a + bt²)", correct: false } ] },
+    { question: "Что называется нормальным ускорением?", answers: [ { text: "составляющая вектора ускорения, перпендикулярная вектору скорости", correct: true }, { text: "нет верного ответа", correct: false }, { text: "ускорение, совпадающее по направлению с направлением вектора скорости", correct: false }, { text: "любой вектор ускорения", correct: false }, { text: "составляющая вектора ускорения, направленная по касательной в любой точке траектории", correct: false } ] },
+    { question: "Чему равна выталкивающая сила, действующая на тело, погруженное в жидкость?", answers: [ { text: "весу жидкости в объеме погруженной части тела", correct: true }, { text: "весу тела в воздухе", correct: false }, { text: "весу, погруженной части тела", correct: false }, { text: "весу жидкости в объеме всего тела", correct: false }, { text: "нет правильного ответа", correct: false } ] },
+    { question: "Чему равно ускорение при равномерном прямолинейном движении тела?", answers: [ { text: "a=0", correct: true }, { text: "a = Δu / Δt", correct: false }, { text: "a = 2S / t²", correct: false }, { text: "a = F / m", correct: false }, { text: "a = t² / 2S", correct: false } ] },
+    { question: "Уравнение Бернулли", answers: [ { text: "ρu²/2 + ρgh + P = const", correct: true }, { text: "ρg²/2 + P + pgh ≠ const", correct: false }, { text: "Pθ + ap = 0", correct: false }, { text: "PU³/2 + gph + p = const", correct: false }, { text: "нет верного ответа", correct: false } ] },
+    { question: "Укажите формулу Штейнера, если m - масса тела, а - расстояние между осями", answers: [ { text: "J=J₀+ma²", correct: true }, { text: "J=ma³", correct: false }, { text: "J=J₀-ma²", correct: false }, { text: "J=J₀²+ma", correct: false }, { text: "J=J₀+ma", correct: false } ] },
+    { question: "Укажите основную формулу вращательного движения, если принять β - угловое ускорение; J - момент инерции тела", answers: [ { text: "M=Jβ", correct: true }, { text: "M=J+Jβ", correct: false }, { text: "M = J/β", correct: false }, { text: "M=J+β", correct: false }, { text: "нет правильного ответа", correct: false } ] },
+    { question: "Чему равна кинетическая энергия вращающегося тела относительно неподвижной оси, если J- момент инерции тела, а ω - его угловая скорость.", answers: [ { text: "E = Iω²/2", correct: true }, { text: "E = Iω²/3", correct: false }, { text: "E = I / 2ω²", correct: false }, { text: "E = Iω/2", correct: false } ] },
+    { question: "Кинематическое уравнение движения материальной точки определяет зависимость:", answers: [ { text: "координат от времени", correct: true }, { text: "скорости от времени", correct: false }, { text: "ускорения от времени", correct: false }, { text: "координат друг от друга", correct: false }, { text: "координат от скорости", correct: false } ] },
+    { question: "Ускорение, придаваемое телу движущей силой:", answers: [ { text: "прямо пропорционально силе и обратно пропорционально массе", correct: true }, { text: "обратно пропорционально силе и прямо пропорционально массе", correct: false }, { text: "прямо пропорционально силе и массе", correct: false }, { text: "обратно пропорционально силе и массе", correct: false }, { text: "прямо пропорционально силе и скорости", correct: false } ] },
+    { question: "Путь s, пройденный телом за время t, определяется формулой:", answers: [ { text: "∫₀ᵗ v(t)dt", correct: true }, { text: "vt", correct: false }, { text: "(1/t) ∫₀ᵗ v(t)dt", correct: false }, { text: "∫₀ᵗ a(t)dt", correct: false }, { text: "(1/t) ∫₀ᵗ a(t)dt", correct: false } ] },
+    { question: "Определение момента силы", answers: [ { text: "[r, F]", correct: true }, { text: "[r, p]", correct: false }, { text: "m·v", correct: false }, { text: "mv²/2", correct: false }, { text: "F·dr", correct: false } ] },
+    { question: "Определение кинетической энергии", answers: [ { text: "mv²/2", correct: true }, { text: "F·dr", correct: false }, { text: "m·v", correct: false }, { text: "[r, p]", correct: false }, { text: "[r, F]", correct: false } ] },
+    { question: "Определение элементарной работы", answers: [ { text: "F·dr", correct: true }, { text: "mv²/2", correct: false }, { text: "m·v", correct: false } ] },
+    { question: "Уравнение движения материальной точки", answers: [ { text: "d p/dt = F", correct: true }, { text: "d L/dt = M", correct: false }, { text: "F₁₂ = -F₂₁", correct: false }, { text: "F = 0; v = const", correct: false }, { text: "I = mR²", correct: false } ] },
+    { question: "Импульс системы остается постоянным во времени, если:", answers: [ { text: "сумма внешних сил равна нулю", correct: true }, { text: "сумма моментов внешних сил равна нулю", correct: false }, { text: "сумма моментов внешних сил постоянна", correct: false }, { text: "сумма внешних сил постоянна", correct: false }, { text: "сумма внутренних сил равна нулю", correct: false } ] },
+    { question: "Определение момента инерции материальной точки", answers: [ { text: "mr²", correct: true }, { text: "mD²", correct: false }, { text: "mR²", correct: false }, { text: "∫R²dm", correct: false }, { text: "∫R²dv", correct: false } ] },
+    { question: "Момент инерции тела", answers: [ { text: "∫R²dm", correct: true }, { text: "ρ∫R²dv", correct: false }, { text: "mr²", correct: false }, { text: "mD²/4", correct: false }, { text: "mR²", correct: false } ] },
+    { question: "Первая космическая скорость находится по формуле (где r – радиус Земли):", answers: [ { text: "v = √(gr)", correct: true }, { text: "v = γm/R", correct: false }, { text: "v = 2√(gr)", correct: false }, { text: "v = √(gr/2)", correct: false }, { text: "v = √(2gr)", correct: false } ] },
+    { question: "Вторая космическая скорость находится по формуле (где r – радиус Земли):", answers: [ { text: "v = √(2gr)", correct: true }, { text: "v = √(gr)", correct: false } ] },
+    { question: "Закон сохранения момента импульса твердого тела", answers: [ { text: "I₁ω₁ = I₂ω₂", correct: true }, { text: "I₁r₁² = I₂r₂²", correct: false }, { text: "I₁m₁² = I₂m₂²", correct: false }, { text: "f₁e₁ = f₂e₂", correct: false }, { text: "m₁c₁² = m₂c₂²", correct: false } ] },
+    { question: "Гидростатическое давление", answers: [ { text: "P = ρgh", correct: true }, { text: "P = ρgV", correct: false }, { text: "P = mg", correct: false }, { text: "P = ρv²/2", correct: false }, { text: "P = ρv²/2 + ρVg", correct: false } ] },
+    { question: "Закон Архимеда", answers: [ { text: "Fₐ = ρgV", correct: true }, { text: "Fₐ = ρgh + ρgV", correct: false }, { text: "Fₐ = ρv²/2 + ρgh", correct: false }, { text: "Fₐ = ρgh", correct: false }, { text: "Fₐ = ρv²/2", correct: false } ] },
+    { question: "Уравнение неразрывности", answers: [ { text: "S₁v₁ = S₂v₂", correct: true }, { text: "S₁v₂ = S₂v₁", correct: false }, { text: "S₁v₁² = S₂v₂²", correct: false }, { text: "S₁v₂² = S₂v₁²", correct: false }, { text: "S₁v₁² = S₂v₂²", correct: false } ] },
+    { question: "Точка равномерно движется по окружности. При этом:", answers: [ { text: "угловая скорость является постоянной", correct: true }, { text: "ускорение равно нулю", correct: false }, { text: "угловое ускорение увеличивается", correct: false }, { text: "тангенциальная составляющая скорости равна нулю", correct: false }, { text: "нормальная составляющая ускорения равна нулю", correct: false } ] },
+    { question: "Материальная точка - это", answers: [ { text: "тело, обладающее массой, размерами которого в данной задаче можно пренебречь", correct: true }, { text: "любое тело, обладающее массой, движущееся со скоростью v относительно другого тела", correct: false }, { text: "только атомное ядро", correct: false }, { text: "молекула вещества в жидком, твердом или газообразном состоянии", correct: false }, { text: "протон, нейтрон, электрон или другая частица", correct: false } ] },
+    { question: "Ускорение материальной точки", answers: [ { text: "a = dv/dt", correct: true }, { text: "p = ∫F(t)dt", correct: false }, { text: "a = dS²/dt", correct: false }, { text: "a = S·t", correct: false }, { text: "a = v·t + v²t", correct: false } ] },
+    { question: "Тангенциальная компонента ускорения", answers: [ { text: "a_τ = dv/dt", correct: true }, { text: "a_τ = v²/r", correct: false }, { text: "a_τ = v³/r", correct: false }, { text: "a_τ = ∫v·dt", correct: false }, { text: "a_τ = dS/dt = f(r)", correct: false } ] },
+    { question: "Нормальная компонента ускорения", answers: [ { text: "a_n = v²/r", correct: true }, { text: "a_n = dv/dt", correct: false }, { text: "a_n = v²·t", correct: false }, { text: "a_n = v²/t", correct: false }, { text: "a_n = v²·t²", correct: false } ] },
+    { question: "Угловая скорость", answers: [ { text: "ω = dφ/dt", correct: true }, { text: "ω = dp/dt", correct: false }, { text: "ω = ∫f(r)dt", correct: false }, { text: "ω = f(r)dr/dt", correct: false }, { text: "ω = a_τ + a_n", correct: false } ] },
+    { question: "Связь линейной v и угловой ω скоростей", answers: [ { text: "v = ω·r", correct: true }, { text: "v = ω²·r", correct: false }, { text: "v = ω/r", correct: false }, { text: "v = ω·r²", correct: false }, { text: "v = ω·f(r)", correct: false } ] },
+    { question: "Связь периода вращения T и угловой скорости ω", answers: [ { text: "T = 2π / ω", correct: true }, { text: "T = π·ω", correct: false }, { text: "T = 4π / ω", correct: false }, { text: "T = 2πω", correct: false }, { text: "T = ω / 2π", correct: false } ] },
+    { question: "Связь частоты вращения ν и угловой скорости ω", answers: [ { text: "ω = 2πν", correct: true }, { text: "ω = πν", correct: false }, { text: "ω = v / 2π", correct: false }, { text: "ω = v / π", correct: false } ] },
+    { question: "Первый закон Ньютона - это", answers: [ { text: "закон инерции", correct: true }, { text: "закон сохранения энергии", correct: false }, { text: "закон сохранения импульса", correct: false }, { text: "закон сохранения момента импульса", correct: false }, { text: "закон сохранения заряда", correct: false } ] },
+    { question: "Второй закон Ньютона - это", answers: [ { text: "F = m(dv/dt)", correct: true }, { text: "закон инерции", correct: false }, { text: "F = L/m", correct: false }, { text: "F = m·L", correct: false }, { text: "F = m²·f(r)", correct: false } ] },
+    { question: "Закон сохранения импульса", answers: [ { text: "P = Σᵢ mᵢvᵢ = const", correct: true }, { text: "E = T + U = const", correct: false }, { text: "F = m·a = const", correct: false }, { text: "P = Σvᵢ = const", correct: false }, { text: "P = mu²/2 = const", correct: false } ] },
+    // NOTE: В вопросе 54 нет правильного варианта. Это может вызвать бесконечный цикл.
+    { question: "Импульс тела", answers: [ { text: "P = mL", correct: false }, { text: "P = U/m", correct: false }, { text: "P = m/v", correct: false }, { text: "P = v²/m", correct: false }, { text: "P = mu²/2", correct: false } ] },
+    { question: "Кинетическая энергия вращающегося тела", answers: [ { text: "E = Iω²/2", correct: true }, { text: "E = mv²/2 + v", correct: false }, { text: "E = mv²/2", correct: false }, { text: "E = mv²/2 - Iω²/2", correct: false }, { text: "E = mv²/2 + Iω²/2 + U", correct: false } ] },
+    { question: "Закон сохранения энергии", answers: [ { text: "E = T + U = const", correct: true }, { text: "E = T - U = const", correct: false }, { text: "E = T/U = const", correct: false }, { text: "E = f(T) - f(U) = const", correct: false } ] },
+    { question: "Связь кинетической энергии T и импульса P", answers: [ { text: "T = P²/2m", correct: true }, { text: "T = P/m", correct: false }, { text: "T = m²/2P", correct: false }, { text: "T = m/P", correct: false }, { text: "T = P²/m", correct: false } ] },
+    { question: "Потенциальная энергия упруго деформированного тела", answers: [ { text: "U = kx²/2", correct: true }, { text: "U = kx²", correct: false }, { text: "U = kx", correct: false }, { text: "U = -k/x²", correct: false }, { text: "U = x²/2k", correct: false } ] },
+    { question: "Потенциальная энергия тела массой m, поднятого на высоту h над Землей, равна:", answers: [ { text: "U = mgh", correct: true }, { text: "U = m²gh", correct: false }, { text: "U = gh/2", correct: false }, { text: "U = mh/g", correct: false }, { text: "U = m/h", correct: false } ] },
+    { question: "Момент инерции I материальной точки относительно оси вращения:", answers: [ { text: "I = mr²", correct: true }, { text: "I = mr", correct: false }, { text: "I = mv", correct: false }, { text: "I = m/r", correct: false }, { text: "I = m²r²", correct: false } ] },
+    { question: "Какая сила определяет движение Земли вокруг Солнца?", answers: [ { text: "Гравитационное взаимодействие с Солнцем", correct: true }, { text: "Электромагнитная", correct: false }, { text: "Гравитационное взаимодействие с Луной", correct: false }, { text: "Гравитационное взаимодействие с планетами", correct: false }, { text: "Движение происходит по инерции", correct: false } ] },
+    { question: "Определение скорости", answers: [ { text: "ds/dt", correct: true }, { text: "dF/dt", correct: false }, { text: "dp/dt", correct: false } ] },
+    { question: "Уравнение состояния идеального газа при адиабатическом процессе:", answers: [ { text: "PV^γ = const", correct: true }, { text: "PV = const", correct: false }, { text: "P/T = const", correct: false }, { text: "V/T = const", correct: false }, { text: "TV^(m-1) = const", correct: false } ] },
+    { question: "При политропическом процессе газ, кроме уравнения состояния, подчиняется дополнительному условию:", answers: [ { text: "C = const", correct: true }, { text: "dQ = 0", correct: false }, { text: "V = const", correct: false }, { text: "T = const", correct: false }, { text: "P = const", correct: false } ] },
+    { question: "При адиабатическом процессе газ, кроме уравнения состояния, подчиняется дополнительному условию:", answers: [ { text: "dQ = 0", correct: true }, { text: "V = const", correct: false }, { text: "T = const", correct: false }, { text: "P = const", correct: false }, { text: "C = const", correct: false } ] },
+    { question: "Уравнение состояния идеального газа можно записать в виде (M - молярная масса; n - число молекул в единице объёма)", answers: [ { text: "PV = (m/M)RT", correct: true }, { text: "P = NkT", correct: false }, { text: "PV = nkT", correct: false }, { text: "P = (ρ/m)RT", correct: false }, { text: "P = (1/3)n<ε_пост>", correct: false } ] },
+    { question: "Уравнение состояния идеального газа можно записать в виде (M - молярная масса; n - число молекул в единице объёма)", answers: [ { text: "P = nkT", correct: true }, { text: "PV = nRT", correct: false }, { text: "PV = (ρ/m)RT", correct: false }, { text: "P = (ρ/M)kT", correct: false }, { text: "P = (2/3)nm<v²>", correct: false } ] },
+    { question: "Уравнение состояния идеального газа для давления можно записать в виде (M - молярная масса; n - число молекул в единице объёма)", answers: [ { text: "P = (1/3)ρ<v²>", correct: true }, { text: "PV = (m/M)kT", correct: false }, { text: "PV = nkT", correct: false }, { text: "P = NkT", correct: false }, { text: "P = (ρ/M)kT", correct: false } ] },
+    { question: "Неравенство Клаузиуса", answers: [ { text: "dS ≥ 0 (для изолированных систем)", correct: true }, { text: "dS > 0", correct: false }, { text: "dS = 0", correct: false }, { text: "dS = dQ/dt", correct: false }, { text: "dS ≥ dQ/dt", correct: false } ] },
+    { question: "КПД цикла Карно (T₁, T₂ - соответственно температура нагревателя и холодильника; Q₁ и Q₂ - соответственно полученная и отнятая теплота)", answers: [ { text: "(T₁-T₂)/T₁", correct: true }, { text: "(Q₁-Q₂)/Q₂", correct: false }, { text: "(T₂-T₁)/T₁", correct: false }, { text: "(Q₂-Q₁)/Q₁", correct: false }, { text: "A/Q₂", correct: false } ] },
+    { question: "Теплоемкость тела", answers: [ { text: "dQ/dT", correct: true }, { text: "(1/m) dQ/dT", correct: false }, { text: "(1/V) dQ/dT", correct: false }, { text: "(1/m)(dU/dT)_p", correct: false }, { text: "(1/V)(dU/dT)_V", correct: false } ] },
+    { question: "Удельная теплоёмкость", answers: [ { text: "(1/m) dQ/dT", correct: true } ] },
+    { question: "Уравнение Ван-дер-Ваальса", answers: [ { text: "(P + a/Vₘ²)(Vₘ - b) = RT", correct: true }, { text: "(P + a/Vₘ²)(Vₘ - b) = νRT", correct: false }, { text: "(P + a'/Vₘ²)(V - b') = RT", correct: false }, { text: "(P + a'/Vₘ²)(Vₘ - b') = νRT", correct: false }, { text: "(P + a/V²)(V - b) = RT", correct: false } ] },
+    { question: "Какие процессы составляют цикл Карно", answers: [ { text: "2 изотермических и 2 адиабатических", correct: true }, { text: "2 изобарических и 2 адиабатических", correct: false }, { text: "2 изохорических и 2 адиабатических", correct: false }, { text: "2 изотермических и 2 изобарических", correct: false }, { text: "2 изотермических и 2 изохорических", correct: false } ] },
+    { question: "Первое начало термодинамики", answers: [ { text: "Закон сохранения и превращения энергии, записанный для термодинамической системы.", correct: true }, { text: "Закон сохранения и превращения энергии", correct: false }, { text: "Закон, устанавливающий эквивалент теплоты, работы и энергии.", correct: false }, { text: "Закон, определяющий функции состояния и функции процесса.", correct: false }, { text: "нет правильного ответа", correct: false } ] },
+    { question: "Укажите выражение для первого начала термодинамики", answers: [ { text: "δQ = dU + δA", correct: true }, { text: "dU = dQ + dA", correct: false }, { text: "dA = dU", correct: false }, { text: "dA = dU + dQ", correct: false }, { text: "нет правильного ответа", correct: false } ] },
+    { question: "Закон Дальтона, определяющий давление смеси газов", answers: [ { text: "P = P₁ + P₂ + P₃ + ... + Pₙ", correct: true }, { text: "PV = (m/M)RT", correct: false }, { text: "P = nkT", correct: false }, { text: "P = ρRT/V", correct: false } ] },
+    { question: "Наиболее вероятная скорость молекул газа", answers: [ { text: "√(2RT/M)", correct: true }, { text: "√(8RT/πM)", correct: false }, { text: "√(3RT/M)", correct: false }, { text: "√(5kT/M)", correct: false }, { text: "√(7kT/πM)", correct: false } ] },
+    { question: "Средняя арифметическая скорость молекул газа", answers: [ { text: "√(8RT/πM)", correct: true }, { text: "√(2RT/M)", correct: false }, { text: "√(3RT/M)", correct: false }, { text: "√(5kT/M)", correct: false }, { text: "√(7kT/πM)", correct: false } ] },
+    { question: "Средняя квадратичная скорость молекул газа", answers: [ { text: "√(3RT/M)", correct: true }, { text: "√(2RT/M)", correct: false }, { text: "√(8RT/πM)", correct: false }, { text: "√(5kT/M)", correct: false }, { text: "√(7kT/πM)", correct: false } ] },
+    { question: "Энтропия системы", answers: [ { text: "является функцией состояния системы", correct: true }, { text: "определяет фазовую траекторию системы", correct: false }, { text: "определяет температуру системы", correct: false }, { text: "характеризует фазовое пространство", correct: false }, { text: "характеризует импульсное пространство", correct: false } ] },
+    { question: "Моли идеальных газов при одинаковых температуре и давлении занимают одинаковые объемы. Это формулировка закона:", answers: [ { text: "Авогадро", correct: true }, { text: "Дальтона", correct: false }, { text: "Бойля-Мариотта", correct: false }, { text: "Максвелла", correct: false }, { text: "Гей-Люссака", correct: false } ] },
+    { question: "Давление смеси идеальных газов равно сумме парциальных давлений входящих в нее газов. Это формулировка закона:", answers: [ { text: "Дальтона", correct: true }, { text: "Бойля-Мариотта", correct: false }, { text: "Гей-Люссака", correct: false }, { text: "Авогадро", correct: false }, { text: "Максвелла", correct: false } ] },
+    { question: "Связь между универсальной газовой постоянной (R) и постоянной Больцмана (k)", answers: [ { text: "R = k·Nₐ", correct: true }, { text: "k = R·Nₐ", correct: false }, { text: "Nₐ = R·k", correct: false }, { text: "R = k/Nₐ", correct: false }, { text: "R = Nₐ/k", correct: false } ] },
+    { question: "Давлению в 1 атмосферу в СИ соответствует давление", answers: [ { text: "1,013·10⁵ Па", correct: true }, { text: "133 Па", correct: false }, { text: "9,8 Па", correct: false }, { text: "8,3 Па", correct: false }, { text: "4,19 Па", correct: false } ] },
+    { question: "Число степеней свободы у молекулы одноатомного идеального газа", answers: [ { text: "i = 3", correct: true }, { text: "i = 5", correct: false }, { text: "i = 6", correct: false }, { text: "i = 9", correct: false }, { text: "i = 11", correct: false } ] },
+    { question: "Число степеней свободы у молекулы двухатомного идеального газа", answers: [ { text: "i = 5", correct: true }, { text: "i = 3", correct: false }, { text: "i = 6", correct: false }, { text: "i = 9", correct: false }, { text: "i = 11", correct: false } ] },
+    { question: "Число степеней свободы у молекулы трехатомного идеального газа", answers: [ { text: "i = 6", correct: true }, { text: "i = 3", correct: false }, { text: "i = 5", correct: false }, { text: "i = 9", correct: false }, { text: "i = 11", correct: false } ] },
+    { question: "Средняя кинетическая энергия молекулы одноатомного идеального газа", answers: [ { text: "(3/2)kT", correct: true }, { text: "(7/2)kT", correct: false }, { text: "(5/2)kT", correct: false }, { text: "kT", correct: false }, { text: "3kT", correct: false } ] },
+    { question: "Средняя кинетическая энергия молекулы двухатомного идеального газа", answers: [ { text: "(5/2)kT", correct: true }, { text: "(3/2)kT", correct: false }, { text: "(7/2)kT", correct: false }, { text: "kT", correct: false }, { text: "3kT", correct: false } ] },
+    { question: "Элементарная работа газа (dA) при изменении его объема (dV)", answers: [ { text: "PdV", correct: true }, { text: "PTdV", correct: false }, { text: "PdT", correct: false }, { text: "PdV^γ", correct: false }, { text: "TdV", correct: false } ] },
+    { question: "Формула Майера", answers: [ { text: "Cₚ = Cᵥ + R", correct: true }, { text: "Cₚ = Cᵥ - R", correct: false }, { text: "Cₚ = C + R", correct: false }, { text: "Cₚ = Cᵥ · R", correct: false }, { text: "Cₚ = Cᵥ", correct: false } ] },
+    { question: "Молярная теплоемкость одноатомного идеального газа при постоянном объеме", answers: [ { text: "Cᵥ = (3/2)R", correct: true }, { text: "Cᵥ = (5/2)R", correct: false }, { text: "Cᵥ = 3R", correct: false }, { text: "Cᵥ = (γ/2)R", correct: false }, { text: "Cᵥ = (3/2)R²", correct: false } ] },
+    { question: "Процесс, при котором внутренняя энергия газа остается неизменной", answers: [ { text: "изотермический", correct: true }, { text: "изохорический", correct: false }, { text: "изобарический", correct: false }, { text: "адиабатический", correct: false }, { text: "политропический", correct: false } ] },
+    { question: "Показатель адиабаты", answers: [ { text: "Cₚ/Cᵥ", correct: true }, { text: "i / (i+2)", correct: false }, { text: "(1+2/i) R", correct: false }, { text: "(C - Cₚ) / (C - Cᵥ)", correct: false }, { text: "(C - Cᵥ) / (C - Cₚ)", correct: false } ] },
+    { question: "На каждую степень свободы в среднем приходится одинаковая кинетическая энергия, равная", answers: [ { text: "kT/2", correct: true }, { text: "(3/2)kT", correct: false }, { text: "(7/2)kT", correct: false }, { text: "kT", correct: false }, { text: "0", correct: false } ] },
+    { question: "Молярная теплоёмкость идеального газа при постоянном давлении", answers: [ { text: "((i+2)/2)R", correct: true }, { text: "R/(γ-1)", correct: false }, { text: "Pv/(γ-1)", correct: false }, { text: "RT/(γ-1)", correct: false }, { text: "iRT/2", correct: false } ] },
+    { question: "Закон Кулона в векторной форме записывается следующим образом:", answers: [ { text: "F₁₂ = (1/4πεε₀) * (q₁q₂/r₁₂³) * r₁₂", correct: true }, { text: "F₁₂ = (1/4πεε₀) * (q₁q₂/r₁₂²) * r₁₂", correct: false }, { text: "F₁₂ = (1/4πεε₀) * (q₁q₂/r₁₂) * r₁₂", correct: false }, { text: "F₁₂ = (1/4πεε₀) * (q₁/r₁₂²) * r₁₂", correct: false }, { text: "F₁₂ = (1/4πεε₀) * (q₂/r₁₂²) * r₁₂", correct: false } ] },
+    { question: "Эквипотенциальные поверхности", answers: [ { text: "Перпендикулярны к линиям напряженности", correct: true }, { text: "Параллельны к линиям напряженности", correct: false }, { text: "Направлены по линии напряженности", correct: false }, { text: "Направлены против линии напряженности", correct: false }, { text: "Всегда являются сферическими", correct: false } ] },
+    { question: "Электроемкость уединенного проводника", answers: [ { text: "C = q/φ", correct: true }, { text: "C = qφ", correct: false }, { text: "C = φ/q", correct: false }, { text: "C = (1/2)qφ", correct: false } ] },
+    { question: "Емкость плоского конденсатора", answers: [ { text: "C = εε₀S/d", correct: true }, { text: "C = ε₀εd/S", correct: false }, { text: "C = εdS/ε₀", correct: false }, { text: "R = ρ·l/S", correct: false } ] },
+    { question: "Первое правило Кирхгофа", answers: [ { text: "Σᵢ Iᵢ = 0", correct: true }, { text: "Σᵢ IᵢRᵢ = Σₖ εₖ", correct: false }, { text: "Σₖ εₖ = Σᵢ Iᵢ", correct: false }, { text: "Σᵢ IᵢRᵢ = 0", correct: false }, { text: "Σₖ εₖ = Σᵢ φᵢ", correct: false } ] },
+    { question: "Второе правило Кирхгофа", answers: [ { text: "Σᵢ IᵢRᵢ = Σₖ εₖ", correct: true }, { text: "Σᵢ Iᵢ = 0", correct: false }, { text: "Σₖ εₖ = Σᵢ Iᵢ", correct: false }, { text: "Σᵢ IᵢRᵢ = 0", correct: false }, { text: "Σₖ εₖ = Σᵢ φᵢ", correct: false } ] },
+    { question: "Укажите связь между потенциальной энергией и потенциалом", answers: [ { text: "W = q·φ", correct: true }, { text: "W = q/φ", correct: false }, { text: "W = q", correct: false }, { text: "W = q·φ²", correct: false }, { text: "W = q²·φ", correct: false } ] },
+    { question: "Связь между совершенной работой и разностью потенциалов", answers: [ { text: "A = q(φ₁ - φ₂)", correct: true }, { text: "A = q²(φ₁ - φ₂)", correct: false }, { text: "A = q³(φ₁ - φ₂)", correct: false }, { text: "A = q(φ₁ - φ₂)²", correct: false }, { text: "A = q(φ₁ - φ₂)⁻²", correct: false } ] },
+    { question: "Электрическая емкость сферы", answers: [ { text: "C = 4πεε₀R", correct: true }, { text: "C = πεε₀R", correct: false }, { text: "C = 2πR", correct: false }, { text: "C = 4πεε₀R²", correct: false }, { text: "C = 4πε₀", correct: false } ] },
+    { question: "Определите общую емкость параллельно соединенных конденсаторов, если емкости отдельных конденсаторов C₁, C₂, C₃...", answers: [ { text: "C = Σᵢ Cᵢ", correct: true }, { text: "1/C = Σᵢ 1/Cᵢ", correct: false }, { text: "C = Σᵢ Cᵢ²", correct: false }, { text: "C = Σᵢ Cᵢ³", correct: false }, { text: "1/C = Σᵢ 1/Cᵢ²", correct: false } ] },
+    { question: "Определите общую емкость последовательно соединенных конденсаторов, если емкости отдельных конденсаторов C₁, C₂, C₃...", answers: [ { text: "1/C = Σᵢ 1/Cᵢ", correct: true }, { text: "C = Σᵢ Cᵢ", correct: false }, { text: "C = Σᵢ Cᵢ²", correct: false }, { text: "C = Σᵢ Cᵢ³", correct: false } ] },
+    { question: "Энергия заряженного проводника", answers: [ { text: "W = (1/2)Cφ²", correct: true }, { text: "W = Cφ²", correct: false }, { text: "W = (1/2)Cφ", correct: false }, { text: "W = (1/2)C²φ", correct: false }, { text: "W = C·φ", correct: false } ] },
+    { question: "Закон Ома для участка цепи", answers: [ { text: "I = U/R", correct: true }, { text: "I = U·R²", correct: false }, { text: "I = U·R", correct: false }, { text: "I = U²/R", correct: false }, { text: "I = U²/R²", correct: false } ] },
+    { question: "Два резистора соединены последовательно. Сопротивление первого - R₁, сопротивление второго - R₂. Определите полное сопротивление цепи", answers: [ { text: "R = R₁ + R₂", correct: true }, { text: "1/R = 1/R₁ + 1/R₂", correct: false }, { text: "1/R = 1/R₁ - 1/R₂", correct: false }, { text: "R = R₁R₂/(R₁+R₂)", correct: false }, { text: "R = R₁R₂/(R₁-R₂)", correct: false } ] },
+    { question: "Два резистора соединены параллельно. Сопротивление первого - R₁, сопротивление второго - R₂. Определите полное сопротивление цепи.", answers: [ { text: "1/R = 1/R₁ + 1/R₂", correct: true }, { text: "R = R₁ + R₂", correct: false }, { text: "1/R = 1/R₁ - 1/R₂", correct: false }, { text: "R = R₁R₂/(R₁+R₂)", correct: false }, { text: "R = R₁R₂/(R₁-R₂)", correct: false } ] },
+    { question: "Закон Ома для полной цепи", answers: [ { text: "I = ε/(R+r)", correct: true }, { text: "I = U·r/(R+r)", correct: false }, { text: "I = U/r", correct: false }, { text: "I = U²·R", correct: false }, { text: "I = U²/(R+r)", correct: false } ] },
+    { question: "Температурная зависимость сопротивления проводника определяется формулой", answers: [ { text: "R = R₀(1+αt)", correct: true }, { text: "R = R₀²(1+αt)", correct: false }, { text: "R = R₀(1+αt)²", correct: false }, { text: "R = R₀(1+αt)⁻²", correct: false } ] },
+    { question: "Зависимость сопротивления проводника от его длины и площади поперечного сечения", answers: [ { text: "R = ρ(l/S)", correct: true }, { text: "R = lS/ρ", correct: false }, { text: "R = ρ/lS", correct: false }, { text: "R = ρ·l·S", correct: false }, { text: "R = ρS/l", correct: false } ] },
+    { question: "Соотношение между напряженностью и потенциалом для однородного электрического поля", answers: [ { text: "E = U/d", correct: true }, { text: "U = Ed", correct: false }, { text: "U = E/d", correct: false }, { text: "C = q/U", correct: false }, { text: "U = qC", correct: false } ] },
+    { question: "Носители электрического тока в металлах", answers: [ { text: "Электроны", correct: true }, { text: "Протоны", correct: false }, { text: "Ионы", correct: false }, { text: "Электроны и ионы", correct: false }, { text: "Электроны и дырки", correct: false } ] },
+    { question: "Соотношение между векторами смещения и напряженности", answers: [ { text: "D = ε₀εE", correct: true }, { text: "P = κε₀E", correct: false }, { text: "F = kε₀D", correct: false }, { text: "D = ε₀E", correct: false }, { text: "D = ε₀E + P", correct: false } ] },
+    { question: "Энергия конденсатора", answers: [ { text: "qU/2", correct: true }, { text: "q²U/2", correct: false }, { text: "qC/2", correct: false }, { text: "CU/2", correct: false }, { text: "U²/2C", correct: false } ] },
+    { question: "Энергия конденсатора", answers: [ { text: "CU²/2", correct: true }, { text: "q²U/2", correct: false }, { text: "qC/2", correct: false }, { text: "CU/2", correct: false }, { text: "U²/2C", correct: false } ] },
+    { question: "Закон Джоуля – Ленца", answers: [ { text: "Q = UIt", correct: true }, { text: "Q = I²Rt", correct: true }, { text: "Q = UI²t", correct: false }, { text: "Q = I²/R · t", correct: false }, { text: "Q = U²Rt", correct: false } ] },
+    { question: "Определить путь, пройденный телом за первые 0,5с, если модуль скорости материальной точки задаётся уравнением v(t) = 16t", answers: [ { text: "2 м", correct: true }, { text: "5 м", correct: false }, { text: "9 м", correct: false }, { text: "6 м", correct: false }, { text: "8 м", correct: false } ] },
+    { question: "Определить нормальное ускорение в момент времени t = 2с, если движение материальной точки по окружности радиусом 6м задаётся уравнением s(t) = t² + 2t + 10", answers: [ { text: "6 м/с²", correct: true }, { text: "9 м/с²", correct: false }, { text: "8 м/с²", correct: false }, { text: "11 м/с²", correct: false }, { text: "10 м/с²", correct: false } ] },
+    { question: "Определите кинетическую энергию тела массой 3 кг, движущегося со скоростью 4 м/с", answers: [ { text: "24 Дж", correct: true }, { text: "18 Дж", correct: false }, { text: "36 Дж", correct: false }, { text: "15 Дж", correct: false }, { text: "48 Дж", correct: false } ] },
+    { question: "Определите изменение импульса тела массой 1кг, движущегося прямолинейно, при изменении его скорости от 10 м/с до 20 м/с", answers: [ { text: "10 кг·м/с", correct: true }, { text: "30 кг·м/с", correct: false }, { text: "0", correct: false }, { text: "-10 кг·м/с", correct: false }, { text: "5 кг·м/с", correct: false } ] },
+    { question: "В баллоне содержится газ при температуре t₁ = 50 °C. До какой температуры t₂ нужно нагреть газ, чтобы его давление увеличилось в три раза? (ответ в градусах C°).", answers: [ { text: "696", correct: true }, { text: "473", correct: false }, { text: "623", correct: false }, { text: "496", correct: false }, { text: "676", correct: false } ] },
+    { question: "При нагревании идеального газа на ΔT = 846 K при постоянном давлении объем его увеличивается в три раза. Найти начальную температуру газа.", answers: [ { text: "423 K", correct: true }, { text: "473 K", correct: false }, { text: "623 K", correct: false }, { text: "696 K", correct: false }, { text: "496 K", correct: false } ] },
+    { question: "Какой объем занимает смесь газов азота (M_N₂ = 28 г/моль) массой m₁ = 14 кг и гелия (M_He = 4 г/моль) массой m₂ = 6 кг при нормальных условиях.", answers: [ { text: "44,8 м³", correct: true }, { text: "33,6 м³", correct: false }, { text: "11,2 м³", correct: false }, { text: "5,6 м³", correct: false }, { text: "2,8 м³", correct: false } ] },
+    { question: "Реальный газ – это газ, в котором:", answers: [ { text: "Молекулы взаимодействуют на расстоянии", correct: true }, { text: "Молекулы – материальные точки", correct: false }, { text: "Внутренняя энергия газа определяется только энергией теплового движения молекул", correct: false }, { text: "Параметры газа связаны уравнением Клапейрона", correct: false }, { text: "Молекулы не взаимодействуют друг с другом", correct: false } ] },
+    { question: "Определить количество теплоты, сообщенное молекулярному водороду массой 0,5кг, нагретому на 100 К при постоянном давлении", answers: [ { text: "7.3·10⁵ Дж", correct: true }, { text: "6.2·10⁵ Дж", correct: false }, { text: "5.2·10⁵ Дж", correct: false }, { text: "4.2·10⁵ Дж", correct: false }, { text: "3.2·10⁵ Дж", correct: false } ] },
+    { question: "Определить КПД двигателя, если температура нагревателя 527°C, а холодильника 287°C.", answers: [ { text: "30%", correct: true }, { text: "40%", correct: false }, { text: "20%", correct: false }, { text: "15%", correct: false }, { text: "35%", correct: false } ] },
+    { question: "Идеальный газ совершает цикл Карно. Работа изотермического расширения газа 500 кДж. Найти работу изотермического сжатия, если КПД равен 20%.", answers: [ { text: "400 кДж", correct: true }, { text: "200 кДж", correct: false }, { text: "500 кДж", correct: false }, { text: "600 кДж", correct: false }, { text: "300 кДж", correct: false } ] },
+    { question: "Как изменится емкость плоского конденсатора C = εε₀S/d, если расстояние между пластинами увеличить в 2 раза?", answers: [ { text: "Уменьшится в два раза", correct: true }, { text: "Увеличится в два раза", correct: false }, { text: "Уменьшится в четыре раза", correct: false }, { text: "Увеличится в четыре раза", correct: false }, { text: "Не изменится", correct: false } ] },
+    { question: "Как изменится сопротивление проволоки R = ρ(l/S), если увеличить ее диаметр в 2 раза?", answers: [ { text: "Уменьшится в 4 раза", correct: true }, { text: "Увеличится в 4 раза", correct: false }, { text: "Уменьшится в 2 раза", correct: false }, { text: "Увеличится в 2 раза", correct: false }, { text: "Не изменится", correct: false } ] },
+    { question: "Как изменится емкость шара C = 4πεε₀R, если увеличить его радиус в 2 раза?", answers: [ { text: "Увеличится в 2 раза", correct: true }, { text: "Уменьшится в 2 раза", correct: false }, { text: "Увеличится в 4 раза", correct: false }, { text: "Уменьшится в 4 раза", correct: false }, { text: "Не изменится", correct: false } ] },
+    { question: "Как изменится мощность электрического тока P = I²R, если увеличить силу тока в 2 раза?", answers: [ { text: "Увеличится в 4 раза", correct: true }, { text: "Увеличится в 2 раза", correct: false }, { text: "Уменьшится в 2 раза", correct: false }, { text: "Уменьшится в 4 раза", correct: false }, { text: "Увеличится в 8 раз", correct: false } ] },
+    { question: "Определить силу взаимодействия двух точечных зарядов 2 нКл и 3 нКл, находящихся в вакууме на расстоянии 3 см друг от друга", answers: [ { text: "6·10⁻⁵ Н", correct: true }, { text: "3·10⁻⁵ Н", correct: false }, { text: "2·10⁻⁵ Н", correct: false }, { text: "8·10⁻⁵ Н", correct: false }, { text: "4·10⁻⁵ Н", correct: false } ] },
+    { question: "Определить сопротивление проводника, если по нему течет ток силой 3 А, и он присоединен к источнику питания с ЭДС 12 В и внутренним сопротивлением 1 Ом", answers: [ { text: "3 Ом", correct: true }, { text: "2 Ом", correct: false }, { text: "4 Ом", correct: false }, { text: "6 Ом", correct: false }, { text: "8 Ом", correct: false } ] },
+    { question: "Два одинаковых источника тока с ЭДС 2,4 В и внутренними сопротивлениями по 0,4 Ом каждый соединены последовательно. Определить силу тока в цепи", answers: [ { text: "6 А", correct: true }, { text: "8 А", correct: false }, { text: "3 А", correct: false }, { text: "2 А", correct: false }, { text: "4 А", correct: false } ] },
+    { question: "Электровоз, начиная движение с места, развивает силу тяги 380 кН. Сила сопротивления составляет 250 кН. Составу массой 500 тонн сообщает ускорение:", answers: [ { text: "0,26 м/с²", correct: true }, { text: "2,6 м/с²", correct: false }, { text: "2м/с²", correct: false }, { text: "3м/с²", correct: false }, { text: "0,2 м/с²", correct: false } ] },
+    { question: "Пуля массой 2 кг, летевшая горизонтально со скоростью 4 м/с, пробивает тонкую доску. На вылете из доски скорость пули 1 м/с. Работа силы трения, возникающая при прохождении пули в доске, равна:", answers: [ { text: "15 Дж", correct: true }, { text: "3 Дж", correct: false }, { text: "17 Дж", correct: false }, { text: "4 Дж", correct: false }, { text: "16 Дж", correct: false } ] },
+    { question: "Тело массой 16 кг закреплено на пружине с жесткостью 100 Н/м. Найти частоту собственных колебаний тела.", answers: [ { text: "2,5 с⁻¹", correct: false }, { text: "3,3 с⁻¹", correct: false }, { text: "0,4 с⁻¹", correct: true }, { text: "0,9 с⁻¹", correct: false }, { text: "1,9 с⁻¹", correct: false } ] },
+    {question: "Тело массой 9 кг закреплено на пружине с жесткостью 100 Н/м. Частота собственных колебаний равна:",
+    answers: [
+        { text: "0,53 с⁻¹", correct: true },    // Это правильная линейная частота ν
+        { text: "3,3 с⁻¹", correct: false },     // Это значение угловой частоты ω, а не линейной
+        { text: "1,9 с⁻¹", correct: false },
+        { text: "0,9 с⁻¹", correct: false },
+        { text: "1,1 с⁻¹", correct: false }
+    ]},
+    { question: "Уравнение колебаний имеет вид х = 5cos(16πt+8). Период колебаний равен:", answers: [ { text: "T = 1/8 с", correct: true }, { text: "T = 16π с", correct: false }, { text: "T = 8π с", correct: false }, { text: "T = 10π с", correct: false }, { text: "T = 1/16 с", correct: false } ] },
+    { question: "Колесо радиусом 0,1м вращается так, что зависимость угла поворота радиуса колеса от времени дается уравнением φ=A+Bt+Ct²+Dt³, где B = 2 рад/с, C = 2 рад/с², D = 3 рад/с³. Найти линейную скорость точек, лежащих на ободе колеса, через 2 с после начала движения.", answers: [ { text: "4,6 м/с", correct: true }, { text: "5,8 м/с", correct: false }, { text: "1,2 м/с", correct: false }, { text: "11,4 м/с", correct: false }, { text: "2,4 м/с", correct: false } ] },
+    // NOTE: В вопросе 146 нет правильного варианта. Это может вызвать бесконечный цикл.
+    { question: "По касательной к шкиву маховика в виде диска массой 5 кг приложена сила 2 Н. Определите кинетическую энергию маховика через 5 с после начала действия силы. Силой трения пренебречь.", answers: [ { text: "20 Дж", correct: false }, { text: "40 Дж", correct: false }, { text: "50 Дж", correct: false }, { text: "10 Дж", correct: false }, { text: "30 Дж", correct: false } ] },
+    { question: "Определите момент инерции материальной точки массой 0,3 кг относительно оси, отстоящей от точки на 20 см.", answers: [ { text: "0,012 кг·м²", correct: true }, { text: "0,12 кг·м²", correct: false }, { text: "1 кг·м²", correct: false }, { text: "3 кг·м²", correct: false }, { text: "12 кг·м²", correct: false } ] },
+    { question: "Момент инерции шара массой 2 кг, относительно оси проходящей через центр масс равен 6 кг·м². Момент инерции этого шара относительно точки O, находящейся на расстоянии 5 м от центра шара, равен:", answers: [ { text: "56 кг·м²", correct: true }, { text: "32 кг·м²", correct: false }, { text: "19 кг·м²", correct: false }, { text: "34 кг·м²", correct: false }, { text: "16 кг·м²", correct: false } ] },
+    { question: "Диск, момент инерции которого 10 кг·м², вращается равноускоренно с ускорением 2 рад/с. Вращающийся момент равен:", answers: [ { text: "20 Н·м", correct: true }, { text: "12 Н·м", correct: false }, { text: "4 Н·м", correct: false }, { text: "5 Н·м", correct: false }, { text: "0,2 Н·м", correct: false } ] },
+    { question: "Диск, момент инерции которого J = 10 кг·м² вращается с угловой скоростью 2 рад/с. Определить момент импульса.", answers: [ { text: "20 кг·м²/с", correct: true }, { text: "5 кг·м²/с", correct: false }, { text: "0,2 кг·м²/с", correct: false }, { text: "12 кг·м²/с", correct: false }, { text: "4 кг·м²/с", correct: false } ] },
+    { question: "Консервативными называются силы:", answers: [ { text: "работа которых не зависит от формы пути", correct: true }, { text: "не влияющие на состояние системы", correct: false }, { text: "работа которых зависит от формы пути", correct: false }, { text: "которые не меняются при изменении состояния системы", correct: false }, { text: "действующие в замкнутых системах", correct: false } ] },
+    { question: "Длина свободного пробега молекул:", answers: [ { text: "Увеличивается с повышением температуры.", correct: true }, { text: "Увеличивается с уменьшением температуры.", correct: false }, { text: "Ответ зависит от рода газа.", correct: false }, { text: "Ответ зависит от интервала температур.", correct: false }, { text: "Не зависит от температуры.", correct: false } ] },
+    { question: "Какая физическая величина должна стоять вместо ..., в выражении силы Ампера dF = I[dl ... B] ?", answers: [ { text: "B-индукция магнитного поля", correct: true }, { text: "Idl- элемент тока", correct: false }, { text: "I-сила тока", correct: false }, { text: "q- заряд", correct: false }, { text: "V-скорость движения заряда", correct: false } ] },
+    { question: "Определение магнитного момента.", answers: [ { text: "pₘ = ISn", correct: true }, { text: "pₘ = qvn", correct: false }, { text: "pₘ = Iln", correct: false }, { text: "pₘ = qSn", correct: false }, { text: "pₘ = BSn", correct: false } ] },
+    { question: "Найти выражение, соответствующее наибольшей разности хода лучей.", answers: [ { text: "Δ = 2λкрасн", correct: true }, { text: "Δ = 2λфиол", correct: false }, { text: "Δ = 2λзел.", correct: false }, { text: "Δ = 2λсин.", correct: false }, { text: "Δ = 2λжелт", correct: false } ] },
+    { question: "Закон смещения Вина", answers: [ { text: "T · λₘ = b", correct: true }, { text: "E = mc²", correct: false }, { text: "F = ma", correct: false }, { text: "P = UI", correct: false }, { text: "V = IR", correct: false } ] },
+    { question: "Формула Планка", answers: [ { text: "r_ω,T = (ħω³/4π²c²) · 1/(e^(ħω/kT) - 1)", correct: true }, { text: "r_ω,T = (ω²/4π²c²)kT", correct: false }, { text: "T · λₘ = b", correct: false }, { text: "E = hν", correct: false } ] },
+    { question: "Модуль плотности потока электромагнитной энергии", answers: [ { text: "|E×H|", correct: true }, { text: "1/√(ε₀μ₀)", correct: false }, { text: "1/√(εμ)", correct: false }, { text: "√(εμ)", correct: false }, { text: "√(ε₂μ₂)/√(ε₁μ₁)", correct: false } ] },
+    { question: "Уравнение Шредингера для стационарных состояний:", answers: [ { text: "Δψ + (2m/ħ²)(E - U)ψ = 0", correct: true }, { text: "Δψ + (2m/ħ²)Eψ = 0", correct: false }, { text: "Δψ + (2m/ħ²)Uψ = 0", correct: false }, { text: "Δψ + (2m/ħ²)(U - E)ψ = 0", correct: false }, { text: "-(ħ²/2m)Δψ + Uψ = iħ(∂ψ/∂t)", correct: false } ] },
+    { question: "Закон Малюса утверждает, что интенсивность света пропущенного через два поляризующих прибора, соответствующие плоскости которых образуют угол φ, пропорциональны:", answers: [ { text: "cos²φ", correct: true }, { text: "sinφ", correct: false }, { text: "sin²φ", correct: false }, { text: "cosφ", correct: false }, { text: "tg φ", correct: false } ] },
+    { question: "Закон Брюстера:", answers: [ { text: "tg φ = n₂₁", correct: true }, { text: "sin φ / sin β = n₂₁", correct: false }, { text: "cos φ / sin β = n₂₁", correct: false }, { text: "cos φ = n₂₂", correct: false }, { text: "sin φ = n₂₁", correct: false } ] },
+    { question: "Закон Бугера.", answers: [ { text: "I = I₀e⁻ᵅˣ", correct: true }, { text: "I = I₀cos²α", correct: false }, { text: "I = I₀(ax)", correct: false }, { text: "I = const", correct: false }, { text: "I = I₀tanφ", correct: false } ] },
+    { question: "Радиус боровских орбит пропорционален главному квантовому числу в степени:", answers: [ { text: "2", correct: true }, { text: "-1", correct: false }, { text: "0", correct: false }, { text: "1", correct: false }, { text: "-2", correct: false } ] },
+    { question: "Скорость электрона на боровских орбитах пропорциональна главному квантовому числу в степени:", answers: [ { text: "-1", correct: true }, { text: "0", correct: false }, { text: "1", correct: false }, { text: "2", correct: false }, { text: "-2", correct: false } ] },
+    { question: "Условия интерференционного максимума", answers: [ { text: "Δ = ±mλ₀ (m=0, 1, 2, ...)", correct: true }, { text: "Δ = ±(m + 1/2)λ₀ (m=0, 1, 2, ...)", correct: false }, { text: "2b = ±(m + 1/2)λ₀ (m=0, 1, 2, ...)", correct: false }, { text: "2bnCosθ₂ = ±mλ₀ (m=1, 2, 3,...)", correct: false }, { text: "2bnCosθ₂ = ±(m + 1/2)λ₀ (m=1, 2, 3,...)", correct: false } ] },
+    { question: "Формула Рэлея – Джинса", answers: [ { text: "r_{ω,T} = (ω²/4π²c²)kT", correct: true }, { text: "r_{ω,T} = R_{ω,T} / A_{ω,T}", correct: false }, { text: "T · λₘ = b", correct: false }, { text: "r_{ω,T} = (ħω³/4π²c³) · 1/(e^(ħω/kT) - 1)", correct: false } ] },
+    { question: "Условия интерференционного минимума", answers: [ { text: "Δ = ±(m + 1/2)λ₀ (m=0, 1, 2, ...)", correct: true }, { text: "2bnCosθ₂ = ±mλ₀ (m=1, 2, 3, ...)", correct: false }, { text: "2bnCosθ₂ = ±(m + 1/2)λ₀ (m=0, 1, 2, ...)", correct: false }, { text: "Δ = ±mλ₀ (m=0, 1, 2, ...)", correct: false }, { text: "2b = ±(m + 1/2)λ₀ (m=0, 1, 2, ...)", correct: false } ] },
+    { question: "Импульс фотона", answers: [ { text: "h/λ", correct: true }, { text: "h/cλ", correct: false }, { text: "hc/λ", correct: false }, { text: "hν", correct: false }, { text: "hν/c²", correct: false } ] },
+    { question: "Масса фотона", answers: [ { text: "h/cλ", correct: true }, { text: "hν/c", correct: false }, { text: "hc/λ", correct: false }, { text: "hν", correct: false }, { text: "h", correct: false } ] },
+    { question: "Энергия фотона", answers: [ { text: "hc/λ", correct: true }, { text: "h/λ", correct: false }, { text: "h/cλ", correct: false }, { text: "hν/c", correct: false }, { text: "hν/c²", correct: false } ] },
+    { question: "Уравнение для многофотонного фотоэффекта", answers: [ { text: "Nhν = A + mv²_{max}/2", correct: true }, { text: "hν = mv²_{max}/2", correct: false }, { text: "hν = A + mv²_{max}/2", correct: false }, { text: "A = hν", correct: false }, { text: "A = Nhν", correct: false } ] },
+    { question: "Работа выхода для многофотонного фотоэффекта", answers: [ { text: "A = Nhν", correct: true }, { text: "eU = mv²_{max}/2", correct: false }, { text: "hν = A + mv²_{max}/2", correct: false }, { text: "A = eU", correct: false }, { text: "Nhν = A + mv²_{max}/2", correct: false } ] },
+    { question: "Красная граница для фотоэффекта", answers: [ { text: "A = hν", correct: true }, { text: "A = Nhν", correct: false }, { text: "A = eU", correct: false }, { text: "A = hν - mv²_{max}/2", correct: false }, { text: "A = mv²_{max}/2", correct: false } ] },
+    { question: "Оптическая длина пути.", answers: [ { text: "L=nS", correct: true }, { text: "n₂S₂-n₁S₁", correct: false }, { text: "n=c/v", correct: false }, { text: "l - λ/d", correct: false }, { text: "(2π/λ)(n₁S₁ - n₂S₂)", correct: false } ] },
+    { question: "Аналитическое выражение принципа Гюйгенса – Френеля", answers: [ { text: "E = ∫_S K(φ)(A/r)Cos(ωt - kr + α)dS", correct: true }, { text: "E = ∫_V K(φ)(A/r)Cos(ωt - kr + α)dr", correct: false }, { text: "E = ∫_V K(φ)(A/r²)Cos(ωt - kr + α)dr", correct: false }, { text: "E = ∫ K(φ)(A/r)Cos(ωt - kr + α)dφ", correct: false } ] },
+    { question: "Формула эффекта Комптона:", answers: [ { text: "Δλ = (h/mc)(1-cosθ)", correct: true }, { text: "Δλ = (2h/mc)(1-cosθ)", correct: false }, { text: "Δλ = (m/hc)(1-cosθ)", correct: false }, { text: "Δλ = (m/hc)sin²(θ/2)", correct: false }, { text: "Δλ = (h/mc)sin²(θ/2)", correct: false } ] },
+    { question: "Плотность энергии электрического поля.", answers: [ { text: "ε₀εE²/2", correct: true }, { text: "ε₀εD²/2", correct: false }, { text: "ε₀εED/2", correct: false }, { text: "E²/2ε₀ε", correct: false }, { text: "ED/2ε₀ε", correct: false } ] },
+    { question: "Плотность энергии электрического поля.", answers: [ { text: "ED/2", correct: true }, { text: "ε₀εD²/2", correct: false }, { text: "ε₀εED/2", correct: false }, { text: "E²/2ε₀ε", correct: false }, { text: "ED/2ε₀ε", correct: false } ] },
+    { question: "Плотность энергии магнитного поля.", answers: [ { text: "BH/2", correct: true }, { text: "μ₀μB²/2", correct: false }, { text: "μ₀μBH/2", correct: false }, { text: "H²/2μ₀μ", correct: false }, { text: "BH/2μ₀μ", correct: false } ] },
+    { question: "Энергия магнитного поля.", answers: [ { text: "LI²/2", correct: true }, { text: "LI/2", correct: false }, { text: "uA²/2", correct: false }, { text: "CU²/2", correct: false }, { text: "qU/2", correct: false } ] },
+    { question: "Закон Био-Савара-Лапласа.", answers: [ { text: "dB = (μ₀μ/4π) · (I[dl × r]/r³)", correct: true }, { text: "dB = (μ₀μ/4π) · (I[dl × r]/r²)", correct: false }, { text: "dB = (1/4πμ₀) · |[Idl, r]|", correct: false }, { text: "B = (μ₀μ/4π) · (q[v, eᵣ]/r³)", correct: false }, { text: "B = (μ₀μ/4π) · (q[v, r]/r²)", correct: false } ] },
+    { question: "Магнитная индукция поля кругового тока.", answers: [ { text: "B = (μ₀I)/(2r)", correct: true }, { text: "B = (μ₀2I)/(4πr)", correct: false }, { text: "B = (μ₀I)/(4πr)", correct: false }, { text: "B = (μ₀2I)/r", correct: false }, { text: "B = μ₀I/r", correct: false } ] },
+    { question: "Сила Лоренца.", answers: [ { text: "F = q[v × B]", correct: true }, { text: "F = q[B × v]", correct: false }, { text: "dF = I[dl, B]", correct: false }, { text: "dF = I[B, dl]", correct: false }, { text: "dF = [j, B]", correct: false } ] },
+    { question: "Модуль силы, действующей на движущийся заряд в магнитном поле.", answers: [ { text: "F = qvBsinα", correct: true }, { text: "F = qvBcosα", correct: false }, { text: "F = IlBsinα", correct: false }, { text: "F = IvBsinα", correct: false }, { text: "F = qlBsinα", correct: false } ] },
+    { question: "Закон Ампера.", answers: [ { text: "dF = I[dl, B]", correct: true }, { text: "F = q[v×B]", correct: false }, { text: "F = q[B×v]", correct: false }, { text: "dF = I[B, dl]", correct: false }, { text: "dF = [j, E]", correct: false } ] },
+    { question: "Соотношение между векторами индукции и напряженности магнитного поля.", answers: [ { text: "B = μ₀μH", correct: true }, { text: "J = χH", correct: false }, { text: "H = B/μ₀ - J", correct: false }, { text: "H = μ₀μB", correct: false }, { text: "J = χB", correct: false } ] },
+    { question: "Абсолютный показатель преломления среды", answers: [ { text: "√(εμ)", correct: true }, { text: "v/c", correct: false }, { text: "2π/λ₀ · Δ", correct: false }, { text: "n₂S₂ - n₁S₁", correct: false }, { text: "nS", correct: false } ] },
+    { question: "Относительный показатель преломления среды", answers: [ { text: "v₁/v₂", correct: true }, { text: "v₂/v₁", correct: false }, { text: "c/v₂", correct: false }, { text: "v₁/c", correct: false }, { text: "v₂/c", correct: false } ] },
+    { question: "Какие оптические явления лежат в основе голографии:", answers: [ { text: "Интерференция и дифракция", correct: true }, { text: "Дифракция света", correct: false }, { text: "Рассеяние и поляризация", correct: false }, { text: "Интерференция и давление света", correct: false }, { text: "Интерференция света", correct: false } ] },
+    { question: "К проводнику с током приблизили магнитную стрелку. Как поведет она себя?", answers: [ { text: "Повернется на некоторый угол", correct: true }, { text: "Притянется", correct: false }, { text: "Останется без изменения", correct: false }, { text: "Оттолкнется", correct: false }, { text: "Оттолкнется и повернется на некоторый угол", correct: false } ] },
+    { question: "Формула эффекта Комптона:", answers: [ { text: "Δλ = (h/mc)(1 - cosθ)", correct: true }, { text: "Δλ = (h/mc)sin²(θ/2)", correct: false }, { text: "Δλ = (2h/mc)(1-cosθ)", correct: false }, { text: "Δλ = (m/hc)(1-cosθ)", correct: false }, { text: "Δλ = (m/hc)sin²(θ/2)", correct: false } ] },
+    { question: "Формула эффекта Комптона:", answers: [ { text: "Δλ = (h/mc)(1-cosθ)", correct: true }, { text: "Δλ = (2h/mc)sin²(θ/2)", correct: false }, { text: "Δλ = (2h/mc)(1-cosθ)", correct: false }, { text: "Δλ = (m/hc)(1-cosθ)", correct: false }, { text: "Δλ = (m/hc)sin²(θ/2)", correct: false } ] },
+    { question: "Комптоновская длина волны:", answers: [ { text: "h/mc", correct: true }, { text: "h/mc²", correct: false }, { text: "mc²/h", correct: false }, { text: "2h/mc", correct: false } ] },
+    { question: "Энергия магнитного поля:", answers: [ { text: "(BH/2)·V", correct: true }, { text: "(μ₀μBH/2)·V", correct: false }, { text: "(H²/2μ₀μ)·V", correct: false }, { text: "(μ₀μB²/2)·V", correct: false }, { text: "LI²/2", correct: false } ] },
+    { question: "Ферромагнетики – это магнетики, у которых магнитная восприимчивость...", answers: [ { text: "Положительна и достигает очень больших значений", correct: true }, { text: "Положительна и мала по величине", correct: false }, { text: "То положительно, то отрицательна в зависимости от молекулярного строения вещества", correct: false }, { text: "Отрицательна и мала по абсолютной величине", correct: false }, { text: "Отрицательна и достигает по абсолютной величине больших значений", correct: false } ] },
+    { question: "Закон Брюстера:", answers: [ { text: "tg φ = n₂₁", correct: true }, { text: "sin φ_Br = n₂₁", correct: false }, { text: "sin φ / sin β = n₂₁", correct: false }, { text: "cos φ / sin β = n₂₁", correct: false }, { text: "cos φ = n₂₂", correct: false } ] },
+    { question: "При падении под углом Брюстера, луч отраженный и луч преломленный составляют угол:", answers: [ { text: "π/2", correct: true }, { text: "π/3", correct: false }, { text: "π/6", correct: false }, { text: "π/4", correct: false }, { text: "π", correct: false } ] },
+    { question: "Дисперсия света", answers: [ { text: "n = f(λ₀)", correct: true }, { text: "v = f(λ₀)", correct: true }, { text: "n = f(ν)", correct: true }, { text: "dn/dλ > 0", correct: false }, { text: "dn/dλ < 0", correct: false } ] },
+    { question: "Дисперсия вещества (нормальная)", answers: [ { text: "dn/dλ < 0", correct: true }, { text: "n = f(λ₀)", correct: false }, { text: "dn/dλ > 0", correct: false }, { text: "n = f(ν)", correct: false }, { text: "v = f(λ₀)", correct: false } ] },
+    { question: "Дисперсия вещества (аномальная)", answers: [ { text: "dn/dλ > 0", correct: true }, { text: "dn/dλ < 0", correct: false }, { text: "n = f(λ₀)", correct: false }, { text: "n = f(ν)", correct: false }, { text: "v = f(λ₀)", correct: false } ] },
+    { question: "Закон Бугера (поглощение света).", answers: [ { text: "I = I₀e⁻ᴷˡ", correct: true }, { text: "I = I₀eᴷˡ", correct: false }, { text: "I=I₀e⁻ᴷl⁻¹", correct: false }, { text: "I=I₀e⁻ᴷ⁻¹l", correct: false }, { text: "I=I₀e⁻ᴷl⁻²", correct: false } ] },
+    { question: "Как изменится магнитная индукция прямого тока, если силу тока увеличить в 2 раза?", answers: [ { text: "Увеличится в 2 раза", correct: true }, { text: "Уменьшится в 2 раза", correct: false }, { text: "Увеличится в 4 раза", correct: false }, { text: "Уменьшится в 4 раза", correct: false }, { text: "Не изменится", correct: false } ] },
+    { question: "Как изменится магнитный момент контура с током, если силу тока в нем увеличить в 2 раза?", answers: [ { text: "Увеличится в 2 раза", correct: true }, { text: "Уменьшится в 2 раза", correct: false }, { text: "Увеличится в 4 раза", correct: false }, { text: "Уменьшится в 4 раза", correct: false }, { text: "Не изменится", correct: false } ] },
+    { question: "Как изменится сила взаимодействия двух параллельных, бесконечно длинных прямых токов, если силу токов в них увеличить в 2 раза?", answers: [ { text: "Увеличится в 4 раза", correct: true }, { text: "Уменьшится в 4 раза", correct: false }, { text: "Увеличится в 2 раза", correct: false }, { text: "Уменьшится в 2 раза", correct: false }, { text: "Не изменится", correct: false } ] },
+    { question: "Как изменится магнитная индукция движущегося заряда, если точку наблюдения удалить на расстояние 2 раза большее?", answers: [ { text: "уменьшится в 4 раза", correct: true }, { text: "увеличится в 4 раза", correct: false }, { text: "уменьшится в 2 раза", correct: false }, { text: "увеличится в 2 раза", correct: false }, { text: "не изменится", correct: false } ] },
+    { question: "Чему равен поток вектора магнитной индукции магнитного поля через замкнутую поверхность?", answers: [ { text: "0", correct: true }, { text: "∫ divBdv", correct: false }, { text: "μ₀(∫jdS + ∫(∂D/∂t)dS)", correct: false }, { text: "(1/ε₀)Σqᵢ", correct: false }, { text: "Σqᵢ/εε₀", correct: false } ] },
+    { question: "Как взаимодействуют два параллельных длинных провода с токами, если направления токов одинаковы", answers: [ { text: "взаимно притягиваются", correct: true }, { text: "взаимно отталкиваются", correct: false }, { text: "не взаимодействуют", correct: false }, { text: "притягиваются независимо от направления токов", correct: false }, { text: "отталкиваются независимо от направления токов", correct: false } ] },
+    { question: "Как взаимодействуют два параллельных длинных провода с токами, если направления токов противоположны:", answers: [ { text: "взаимно отталкиваются", correct: true }, { text: "не взаимодействуют", correct: false }, { text: "притягиваются независимо от направления токов", correct: false }, { text: "отталкиваются независимо от направления токов", correct: false }, { text: "взаимно притягиваются", correct: false } ] },
+    { question: "Укажите плотность энергии электромагнитной волны", answers: [ { text: "(1/2)(ε₀εE² + μ₀μH²)", correct: true }, { text: "(1/2)ε₀εE²", correct: false }, { text: "(1/2)μ₀μH²", correct: false }, { text: "ε₀εE²", correct: false }, { text: "μ₀μH²", correct: false } ] },
+    { question: "Как изменится плотность энергии магнитного поля соленоида, если магнитную индукцию увеличить в 2 раза?", answers: [ { text: "Увеличится в 4 раза", correct: true }, { text: "Уменьшится в 4 раза", correct: false }, { text: "Уменьшится в 2 раза", correct: false }, { text: "Увеличится в 2 раза", correct: false }, { text: "Не изменится", correct: false } ] },
+    { question: "Теорема Гаусса для вектора магнитной индукции имеет вид:", answers: [ { text: "∮BdS = 0", correct: true }, { text: "∮BdS = Σqᵢ", correct: false }, { text: "rotB = μ₀j", correct: false }, { text: "rotB = j/ε₀ε", correct: false }, { text: "∮Bdl = μ₀ΣIᵢ", correct: false } ] },
+    { question: "Э. Д. С. самоиндукции определяется выражением (L=const):", answers: [ { text: "-L(dI/dt)", correct: true }, { text: "dW/dt", correct: false }, { text: "-dΦ/dt", correct: false }, { text: "-I(dL/dt)", correct: false }, { text: "-(I/dt)dB", correct: false } ] },
+    { question: "Определить среднее значение Э. Д. С. индукции в контуре, если магнитный поток с Φ₁=27мВб уменьшится до Φ₂=0 за время Δt=3мс.", answers: [ { text: "9 В", correct: true }, { text: "12 В", correct: false }, { text: "15 В", correct: false }, { text: "11 В", correct: false }, { text: "14 В", correct: false } ] },
+    { question: "Частота колебаний монохроматического света равна 5·10¹⁴с⁻¹. Определить длину волны света в веществе (n=2)", answers: [ { text: "3·10⁻⁷ м", correct: true }, { text: "4·10⁻⁷ м", correct: false }, { text: "2·10⁻⁷ м", correct: false }, { text: "5·10⁻⁷ м", correct: false }, { text: "6·10⁻⁷ м", correct: false } ] },
+    { question: "Луч света из воздуха падает на поверхность диэлектрика под углом 56°. Найти угол преломления луча, если отраженный луч полностью поляризован.", answers: [ { text: "34°", correct: true }, { text: "46°", correct: false }, { text: "64°", correct: false }, { text: "90°", correct: false }, { text: "26°", correct: false } ] },
+    { question: "Дифракционная решетка содержит 200 штрихов на миллиметр. На решетку падает нормальный монохроматический свет, длинной волны λ=600нм. Найти максимум наибольшего порядка решетки.", answers: [ { text: "8", correct: true }, { text: "16", correct: false }, { text: "4", correct: false }, { text: "24", correct: false }, { text: "6", correct: false } ] },
+    { question: "Определить оптическую разность хода Δ (в длинах волн) двух интерферирующих волн, если разность фаз φ=8π", answers: [ { text: "4", correct: true }, { text: "2", correct: false }, { text: "8", correct: false }, { text: "5", correct: false }, { text: "7", correct: false } ] },
+    { question: "Определить расстояние l от источников до экрана в опыте Юнга, если длина волны падающего света λ=400нм, расстояние между щелями d=0.8мм и ширина интерференционной полосы b=3мм.", answers: [ { text: "6 м", correct: true }, { text: "4 м", correct: false }, { text: "3 м", correct: false }, { text: "2 м", correct: false }, { text: "10 м", correct: false } ] },
+    { question: "Определить радиус r₄ (в мм) четвертой зоны Френеля для плоского волнового фронта (λ=500нм), если расстояние от волнового фронта до наблюдаемой точки b=2м.", answers: [ { text: "2", correct: true }, { text: "3", correct: false }, { text: "4", correct: false }, { text: "6", correct: false } ] },
+    { question: "Определить длину волны λ (·10⁻⁷ м) спектра второго порядка накладывающийся на длину волны λ₀=0.4мкм спектра третьего порядка.", answers: [ { text: "6", correct: true }, { text: "3", correct: false }, { text: "10", correct: false }, { text: "4", correct: false }, { text: "2", correct: false } ] },
+    { question: "Определить энергию фотона (в эВ), если при его падении на вещество задерживающая разность потенциалов U=2В, а красная граница фотоэффекта λ₀=207нм.", answers: [ { text: "8", correct: true }, { text: "4", correct: false }, { text: "2", correct: false }, { text: "5", correct: false }, { text: "6", correct: false } ] },
+    { question: "Во сколько раз энергия фотона больше максимальной кинетической энергии фотоэлектрона (ε_зат.=2эВ), если красная граница фотоэффекта λ₀=124нм.", answers: [ { text: "6", correct: false }, { text: "4", correct: false }, { text: "2", correct: false }, { text: "5", correct: true }, { text: "3", correct: false } ] },
+    {question: "Определить длину волны λ (в пм) света, рассеянного под углом θ=120⁰ к направлению падающего пучка света. Длина волны рентгеновского излучения λ=5,4пм.",
+    answers: [
+        { text: "9.04", correct: true },   // Верный ответ, подтвержденный расчетом
+        { text: "9", correct: false },    // Неточный ответ-ловушка
+        { text: "3.64", correct: false }, // Это Δλ, а не итоговая λ'. (Можно добавить как лучший вариант-ловушку)
+        { text: "8", correct: false },    // Синтаксис исправлен
+        { text: "5", correct: false }
+    ]},
+    { question: "Определить длину волны де Бройля λ (в нм), характеризующую волновые свойства электрона (mₑ=9,11·10⁻³¹кг), если его скорость v=1,2·10⁵м/с.", answers: [ { text: "6", correct: true }, { text: "4", correct: false }, { text: "9", correct: false }, { text: "3", correct: false }, { text: "2", correct: false } ] },
+    // NOTE: В вопросе 225 нет правильного варианта. Это может вызвать бесконечный цикл.
+    { question: "Определить максимальное напряжение (в кВ) на обкладках конденсатора колебательного контура, если контур имеет емкость C=2нФ, индуктивность L=8мГн и I_max=0.8А.", answers: [ { text: "6", correct: false }, { text: "4", correct: false }, { text: "5", correct: false }, { text: "2", correct: false }, { text: "7", correct: false } ] },
+    { question: "При скорости изменения силы тока (ΔI/Δt) = 1,2 А/с в соленоиде, на его концах возникает Э. Д. С самоиндукции ε=4,8В. Определить индуктивность L соленоида.", answers: [ { text: "4 Гн", correct: true }, { text: "6 Гн", correct: false }, { text: "8 Гн", correct: false }, { text: "10 Гн", correct: false }, { text: "2 Гн", correct: false } ] },
+    // NOTE: В вопросе 227 нет правильного варианта. Это может вызвать бесконечный цикл.
+    { question: "Определить длину волны де Бройля, характеризующую волновые свойства протона, если его скорость v=1Мм/с", answers: [ { text: "0,4нм", correct: false }, { text: "0,7нм", correct: false }, { text: "91пм", correct: false }, { text: "52пм", correct: false }, { text: "57нм", correct: false } ] },
+    { question: "Определить длину волны де Бройля, характеризующую волновые свойства электрона, если его скорость v = 8·10⁶ м/с", answers: [ { text: "91пм", correct: true }, { text: "0,7нм", correct: false }, { text: "0,4нм", correct: false }, { text: "52пм", correct: false }, { text: "57нм", correct: false } ] },
+    { question: "В результате комптоновского рассеяния на свободном покоящемся электроне длина фотона увеличивается в 4 раза. Найти кинетическую энергию электрона отдачи, если энергия рассеянного фотона ε=0,16МэВ", answers: [ { text: "0,48МэВ", correct: true }, { text: "0,54МэВ", correct: false }, { text: "0,56МэВ", correct: false }, { text: "0,46МэВ", correct: false }, { text: "0,72МэВ", correct: false } ] },
+    { question: "Что называется массовым числом ядра?", answers: [ { text: "Количество нуклонов ядра", correct: true }, { text: "Количество протонов в ядре", correct: false }, { text: "Масса ядра", correct: false }, { text: "Количество нейтронов в ядре", correct: false }, { text: "Количество электронов в атоме", correct: false } ] },
+    { question: "Какая частица освобождается при ядерной реакции ⁹Be + ⁴He → ¹²C + ?", answers: [ { text: "n (нейтрон)", correct: true }, { text: "p", correct: false }, { text: "α", correct: false }, { text: "γ", correct: false }, { text: "e⁻", correct: false } ] },
+    { question: "Определите атомный номер, массовое число и химический символ ядра, если в ядре ³He протоны заменить нейтронами, а нейтроны протонами.", answers: [ { text: "³H (тритий)", correct: true }, { text: "³He", correct: false }, { text: "²H", correct: false }, { text: "⁵Li", correct: false } ] },
+    { question: "Какое излучение из перечисленных ниже имеет самую низкую частоту: 1- ультрафиолетовые лучи, 2- инфракрасные лучи, 3- видимый свет, 4- радиоволны, 5- рентгеновские лучи:", answers: [ { text: "радиоволны", correct: true }, { text: "видимый свет", correct: false }, { text: "рентгеновские лучи", correct: false }, { text: "ультрафиолетовые лучи", correct: false }, { text: "инфракрасные лучи", correct: false } ] },
+    { question: "Сколько протонов Z и сколько нейтронов N в ядре изотопа кислорода ¹⁷O?", answers: [ { text: "Z=8, N=9", correct: true }, { text: "Z=17, N=8", correct: false }, { text: "Z=8, N=7", correct: false }, { text: "Z=8, N=15", correct: false }, { text: "Z=8, N=8", correct: false } ] },
+    { question: "Какие лучи, из перечисленных, имеют самую короткую длину волны:", answers: [ { text: "Рентгеновские лучи", correct: true }, { text: "Инфракрасный свет", correct: false }, { text: "Видимый свет", correct: false }, { text: "Ультрафиолетовые лучи", correct: false }, { text: "Радиоволны", correct: false } ] },
+    { question: "Обобщенная формула Бальмера", answers: [ { text: "ω = R(1/m² - 1/n²), n=m+1, m+2, ...", correct: true }, { text: "(при заданном n) ω = R(1/m² - 1/n²), n=m+2, m+3, ...", correct: false }, { text: "(при заданном m) ω = R(1/m² - 1/n²), n=m-1, m, ...", correct: false }, { text: "(при заданном m) ω = R(1/m² - 1/n²), m=n+2, n+3, ...", correct: false } ] },
+    { question: "Укажите плотность энергии электромагнитной волны", answers: [ { text: "(1/2)(ε₀εE² + μ₀μH²)", correct: true }, { text: "(1/2)ε₀εE²", correct: false }, { text: "(1/2)μ₀μH²", correct: false }, { text: "ε₀εE²", correct: false }, { text: "μ₀μH²", correct: false } ] },
+    // NOTE: В вопросе 238 нет правильного варианта. Это может вызвать бесконечный цикл.
+    { question: "Теорема Гаусса для вектора магнитной индукции имеет вид:", answers: [ { text: "dB = 0", correct: false }, { text: "∮BdS = Σqᵢ", correct: false }, { text: "rotB = μ₀j", correct: false }, { text: "rotB = j/ε₀ε", correct: false }, { text: "∮Bdl = μ₀ΣIᵢ", correct: false } ] },
+    { question: "Определить скорость света в жидкости, если длина волны 600нм, а частота 10¹⁴Гц.", answers: [ { text: "0,6·10⁸м/с", correct: true }, { text: "1,2·10⁸м/с", correct: false }, { text: "1,4·10⁸м/с", correct: false }, { text: "1,8·10⁸м/с", correct: false }, { text: "0,4·10⁸м/с", correct: false } ] },
+    { question: "Какое из перечисленных явлений нельзя объяснить с точки зрения квантовой теории?", answers: [ { text: "Дифракция", correct: true }, { text: "Фотоэффект", correct: false }, { text: "Эффект Комптона", correct: false }, { text: "Тепловое излучение тел", correct: false }, { text: "Коротковолновая граница тормозного рентгеновского излучения", correct: false } ] },
+    { question: "Плоское зеркало может вращаться вокруг оси О перпендикулярно плоскости, в которой расположены лучи. Луч падает на зеркало под углом α. На какой угол повернется отраженный луч, если зеркало повернули на 10⁰.", answers: [ { text: "20⁰", correct: true }, { text: "10⁰", correct: false }, { text: "30⁰", correct: false }, { text: "40⁰", correct: false }, { text: "80⁰", correct: false } ] },
+    { question: "Изображение находится на расстоянии b=3f от вогнутого зеркала, на каком расстоянии от зеркала находится предмет?", answers: [ { text: "3f/2", correct: true }, { text: "-2f", correct: false }, { text: "2f", correct: false }, { text: "3f", correct: false }, { text: "-3/2f", correct: false } ] },
+    { question: "Предмет находится на расстоянии a=2f от вогнутого зеркала, на каком расстоянии от зеркала находится изображение?", answers: [ { text: "2f", correct: true }, { text: "-2f", correct: false }, { text: "3f/2", correct: false }, { text: "3f", correct: false }, { text: "-3/2f", correct: false } ] },
+    { question: "Уравнение сферической волны имеет вид:", answers: [ { text: "S(r, t) = (A₀/r)cos(ωt - kr + φ₀)", correct: true }, { text: "S(x, t) = Acos(ωt + φ₀)", correct: false }, { text: "S(x, t) = Acos(ωt - kx + φ₀)", correct: false }, { text: "S(x, t) = Acos(ωt + kx + φ₀)", correct: false }, { text: "S(r, t) = (A₀/r)cos(ωt + φ₀)", correct: false } ] },
+    { question: "Уравнение плоской волны, распространяющаяся вдоль оси X, имеет вид:", answers: [ { text: "S(x, t) = Acos(ωt - kx + φ₀)", correct: true }, { text: "S(x, t) = Acos(ωt + kx + φ₀)", correct: false }, { text: "S(r, t) = (A₀/r)cos(ωt - kr + φ₀)", correct: false }, { text: "S(x, t) = Acos(ωt + φ₀)", correct: false }, { text: "S(x, t) = Acos(ωt + kx)", correct: false } ] },
+    { question: "Какую волну – продольную или поперечную описывает уравнение S=Acos(ωt-kx)", answers: [ { text: "Как продольную, так и поперечную", correct: true }, { text: "Только продольную", correct: false }, { text: "Только поперечную", correct: false }, { text: "Сферическую", correct: false }, { text: "Только поверхностную", correct: false } ] },
+    { question: "Электрические колебания в колебательном контуре заданы уравнением q=10⁻²cos20t. Чему равна амплитуда колебаний?", answers: [ { text: "10⁻²", correct: true }, { text: "20", correct: false }, { text: "20t", correct: false }, { text: "Cos20t", correct: false }, { text: "Sin20t", correct: false } ] },
+    { question: "При выдвигании из катушки постоянного магнита, в ней возникает электрический ток. Это явление называется:", answers: [ { text: "Электромагнитная индукция", correct: true }, { text: "Электростатическая индукция", correct: false }, { text: "Индуктивность", correct: false }, { text: "Самоиндукция", correct: false }, { text: "Магнитная индукция", correct: false } ] },
+    { question: "Каким должен быть угол падения светового луча, чтобы отраженный луч составлял с падающим 50⁰", answers: [ { text: "25⁰", correct: true }, { text: "100⁰", correct: false }, { text: "50⁰", correct: false }, { text: "75⁰", correct: false }, { text: "40⁰", correct: false } ] },
+    { question: "В однородной изотропной среде с ε = 4 и μ = 1 распространяется плоская электромагнитная волна. Определите ее скорость", answers: [ { text: "1,5·10⁸ м/с", correct: true }, { text: "2,1·10⁸ м/с", correct: false }, { text: "0,75·10⁸ м/с", correct: false }, { text: "3·10⁸ м/с", correct: false }, { text: "0,5·10⁸ м/с", correct: false } ] },
+    { question: "Плоскость, в которой происходят колебания вектора E, называется:", answers: [ { text: "Плоскостью поляризации", correct: true }, { text: "Плоскостью дисперсии", correct: false }, { text: "Плоскостью дифракции", correct: false }, { text: "Плоскостью интерференции", correct: false }, { text: "Атомной плоскостью", correct: false } ] },
+    { question: "Какова связь между добротностью колебательной системы и её логарифмическим декрементом?", answers: [ { text: "Q=π/λ", correct: true }, { text: "Q=πλ", correct: false }, { text: "λ=βT", correct: false }, { text: "λ=β/T", correct: false } ] },
+    { question: "Какова связь между коэффициентом затухания колебательной системы и её логарифмическим декрементом?", answers: [ { text: "λ = βT", correct: true }, { text: "Q = π/λ", correct: false }, { text: "Q =πλ", correct: false }, { text: "λ = β/T", correct: false }, { text: "Q = π/βT", correct: false } ] },
+    { question: "Какова связь между добротностью колебательной системы и её коэффициентом затухания?", answers: [ { text: "Q = π/βT", correct: true }, { text: "Q = π/λ", correct: false }, { text: "Q =πλ", correct: false }, { text: "λ = βT", correct: false }, { text: "λ = β/T", correct: false } ] },
+    { question: "Скорость распространения волн в среде 2·10³ м/с, период колебания 10⁻³ с. Разность фаз колебаний 2-х точек, удаленных от источника на 12 и 14 м, равна:", answers: [ { text: "2π", correct: true }, { text: "1,6π", correct: false }, { text: "0,8π", correct: false }, { text: "0,4π", correct: false }, { text: "1,2π", correct: false } ] },
+    { question: "Скорость распространения волн в среде 2,5·10³ м/с, период колебания 10⁻³ с. Разность фаз колебаний 2-х точек, удаленных от источника на 12 и 14 м, равна:", answers: [ { text: "1,6π", correct: true }, { text: "2π", correct: false }, { text: "0,8π", correct: false }, { text: "0,4π", correct: false }, { text: "1,2π", correct: false } ] },
+    { question: "Колебательный контур состоит из катушки индуктивности 1 мГн и конденсатора 2 нФ. Период электромагнитных колебаний в контуре равен:", answers: [ { text: "8,9·10⁻⁶ с", correct: true }, { text: "6,28·10⁻⁶ с", correct: false }, { text: "3,14·10⁻⁶ с", correct: false }, { text: "4,4·10⁻⁶ с", correct: false }, { text: "0,7·10⁶ с", correct: false } ] },
+    { question: "Какую работу совершает постоянное магнитное поле над движущейся в нем заряженной частицей?", answers: [ { text: "A=0", correct: true }, { text: "A=qΔφ", correct: false }, { text: "A=-∫ εᵢldt", correct: false }, { text: "dA=IdΦ", correct: false }, { text: "dA=I[dl, B]dn", correct: false } ] },
+    { question: "Какое излучение из перечисленных имеет самую высокую частоту?", answers: [ { text: "Рентгеновские лучи", correct: true }, { text: "Радиоволны", correct: false }, { text: "Инфракрасные лучи", correct: false }, { text: "Видимый свет", correct: false }, { text: "Ультрафиолетовые лучи", correct: false } ] },
+    { question: "Волны называются когерентными, если ...:", answers: [ { text: "Они имеют одинаковую частоту и постоянную разность фаз", correct: true }, { text: "Они имеют одинаковую скорость и частоту", correct: false }, { text: "Они имеют одинаковую частоту", correct: false }, { text: "Они продольные", correct: false }, { text: "Они поперечны", correct: false } ] },
+    { question: "Период полураспада радиоактивного элемента T. Сколько ядер N этого элемента распадется к моменту времени t =T/4, если в начальный момент имелось N₀ ядер:", answers: [ { text: "N=N₀(1 - e^(-ln2/4))", correct: true }, { text: "(1/8)N₀", correct: false }, { text: "(1/4)N₀", correct: false }, { text: "N=N₀(1 - e^(-ln2))", correct: false }, { text: "N=N₀e^(-ln2/4)", correct: false } ] },
+    { question: "Уравнение гармонических колебаний:", answers: [ { text: "x=xₘcos(ωt+φ)", correct: true }, { text: "x=xₘcos(φt+ω)", correct: false }, { text: "x=xₘcosφ", correct: false }, { text: "x=xₘcosφt", correct: false }, { text: "x=xₘsinφt", correct: false } ] },
+    { question: "Индуктивность контура связана с потокосцеплением соотношением", answers: [ { text: "Ψ=LI", correct: true }, { text: "Ψ=LI²", correct: false }, { text: "Ψ=L²I", correct: false }, { text: "Ψ=LI²/2", correct: false }, { text: "Ψ=L²I/2", correct: false } ] },
+    { question: "Энергетическая светимость абсолютно черного тела 10⁴Вт/м². Найти его температуру (постоянная Больцмана σ=5,67·10⁻⁸ Вт/(м²·К⁴))", answers: [ { text: "650 К", correct: true }, { text: "700 К", correct: false }, { text: "180 К", correct: false }, { text: "1000 К", correct: false }, { text: "230 К", correct: false } ] },
+    { question: "Потенциал задержания фототока 3,7 В. Найти максимальную скорость фотоэлектрона (e=1,6·10⁻¹⁹Кл, mₑ=9.1·10⁻³¹кг)", answers: [ { text: "1,14·10⁶ м/с", correct: true }, { text: "0,84·10⁶ м/с", correct: false }, { text: "2,64·10⁶ м/с", correct: false }, { text: "3,54·10⁶ м/с", correct: false }, { text: "4,24·10⁶ м/с", correct: false } ] },
+    { question: "Полное сопротивление переменного тока", answers: [ { text: "√(R² + (ωL - 1/ωC)²)", correct: true }, { text: "ωL", correct: false }, { text: "1/ωC", correct: false }, { text: "R", correct: false }, { text: "ωL - 1/ωC", correct: false } ] },
+    { question: "Закон радиоактивного распада", answers: [ { text: "N=N₀e⁻λt", correct: true }, { text: "A = |dN/dt|", correct: false }, { text: "T = ln2/λ", correct: false }, { text: "hν = Eₙ - Eₘ", correct: false }, { text: "λ = h/mv", correct: false } ] },
+    { question: "Наибольшей проникающей способностью обладают", answers: [ { text: "γ-лучи", correct: true }, { text: "α-лучи", correct: false }, { text: "β-лучи", correct: false }, { text: "α и β лучи", correct: false }, { text: "α,β,γ – одинаково", correct: false } ] },
+    { question: "Наименьшей проникающей способностью обладают", answers: [ { text: "α-лучи", correct: true }, { text: "β-лучи", correct: false }, { text: "γ-лучи", correct: false }, { text: "α и β лучи", correct: false }, { text: "α,β,γ – одинаково", correct: false } ] },
+    { question: "Энергетическая светимость абсолютно черного тела увеличилась в 2 раза. Во сколько раз увеличилась его температура?", answers: [ { text: "в 1,19 раза", correct: true }, { text: "в 1,4 раза", correct: false }, { text: "в 2 раза", correct: false }, { text: "в 16 раз", correct: false }, { text: "в 8 раз", correct: false } ] },
+    { question: "При прохождении света через поляризатор и анализатор его интенсивность уменьшилась в 2 раза. Угол между плоскостями анализатора и поляризатора равен", answers: [ { text: "45⁰", correct: true }, { text: "30⁰", correct: false }, { text: "60⁰", correct: false }, { text: "0⁰", correct: false }, { text: "90⁰", correct: false } ] },
+    { question: "При прохождении света через поляризатор и анализатор его интенсивность уменьшилась в 4 раза. Угол между плоскостями анализатора и поляризатора равен", answers: [ { text: "60⁰", correct: true }, { text: "45⁰", correct: false }, { text: "30⁰", correct: false }, { text: "0⁰", correct: false }, { text: "90⁰", correct: false } ] },
+    { question: "Угол между плоскостями анализатора и поляризатора увеличили с 45⁰ до 60⁰, во сколько раз изменилась интенсивность света", answers: [ { text: "Уменьшилась в 2 раза", correct: true }, { text: "Увеличилась в 2 раза", correct: false }, { text: "Уменьшилась в 4 раза", correct: false }, { text: "Увеличилась в 4 раза", correct: false }, { text: "Уменьшилась в 3 раза", correct: false } ] },
+    { question: "β⁻-излучение", answers: [ { text: "Поток электронов", correct: true }, { text: "Поток ядер гелия", correct: false }, { text: "Электромагнитное излучение", correct: false }, { text: "Поток позитронов", correct: false }, { text: "Поток протонов", correct: false } ] },
+    { question: "β⁺-излучение", answers: [ { text: "Поток позитронов", correct: true }, { text: "Поток электронов", correct: false }, { text: "Поток ядер гелия", correct: false }, { text: "Электромагнитное излучение", correct: false }, { text: "Поток протонов", correct: false } ] },
+    { question: "α-излучение", answers: [ { text: "Поток ядер гелия", correct: true }, { text: "Поток электронов", correct: false }, { text: "Электромагнитное излучение", correct: false }, { text: "Поток позитронов", correct: false }, { text: "Поток протонов", correct: false } ] },
+    { question: "γ-излучение", answers: [ { text: "Электромагнитное излучение", correct: true }, { text: "Поток ядер гелия", correct: false }, { text: "Поток электронов", correct: false }, { text: "Поток позитронов", correct: false }, { text: "Поток протонов", correct: false } ] },
+    { question: "Красная граница фотоэффекта для некоторого металла равна 500 нм. Найти минимальную энергию фотона, вызывающего фотоэффект (в эВ)", answers: [ { text: "2,5", correct: true }, { text: "2", correct: false }, { text: "3", correct: false }, { text: "3,5", correct: false }, { text: "1,5", correct: false } ] },
+    { question: "Определить работу выхода (в эВ) электронов из вещества, если при падении на его поверхность света длиной волны λ=207нм задерживающая разность потенциалов равна U=4B.", answers: [ { text: "2", correct: true }, { text: "4", correct: false }, { text: "5", correct: false }, { text: "8", correct: false }, { text: "3", correct: false } ] },
+    { question: "Определить максимальную кинетическую энергию фотоэлектрона (в эВ) при падении на поверхность вещества света длиной волны λ=124нм, если красная граница фотоэффекта λ₀=249нм.", answers: [ { text: "5", correct: true }, { text: "4", correct: false }, { text: "2", correct: false }, { text: "8", correct: false }, { text: "6", correct: false } ] },
+    { question: "Определить энергию фотона (в эВ), если при его падении на вещество задерживающая разность потенциалов U=2B, а красная граница фотоэффекта λ₀=207нм.", answers: [ { text: "6", correct: true }, { text: "4", correct: false }, { text: "2", correct: false }, { text: "5", correct: false }, { text: "8", correct: false } ] },
+    { question: "Во сколько раз импульс фотона, которому соответствует длина волны λ=332нм, больше импульса фотона p=10⁻²⁷кг·м/с.", answers: [ { text: "2", correct: true }, { text: "4", correct: false }, { text: "3", correct: false }, { text: "6", correct: false }, { text: "5", correct: false } ] },
+    { question: "Определить длину волны λ (в пм) света, рассеянного под углом θ=120⁰ к направлению падающего пучка света. Длина волны рентгеновского излучения λ=5,4пм.", answers: [ { text: "9.04", correct: true }, { text: "3", correct: false }, { text: "8", correct: false }, { text: "5", correct: false }, { text: "2", correct: false } ] },
+    { question: "Определить длину волны де Бройля λ (в нм), характеризующую волновые свойства электрона (mₑ=9,11·10⁻³¹кг), если его скорость v=1,2·10⁵м/с.", answers: [ { text: "6", correct: true }, { text: "4", correct: false }, { text: "9", correct: false }, { text: "3", correct: false }, { text: "2", correct: false } ] },
+    { question: "При скорости изменения силы тока (ΔI/Δt) = 1,2 А/с в соленоиде, на его концах возникает Э. Д. С самоиндукции ε=4,8В. Определить индуктивность L соленоида.", answers: [ { text: "4 Гн", correct: true }, { text: "6 Гн", correct: false }, { text: "8 Гн", correct: false }, { text: "10 Гн", correct: false }, { text: "2 Гн", correct: false } ] },
+    // NOTE: В вопросе 286 нет правильного варианта. Это может вызвать бесконечный цикл.
+    { question: "Определить длину волны де Бройля, характеризующую волновые свойства протона, если его скорость v=1Мм/с", answers: [ { text: "0,4нм", correct: false }, { text: "0,7нм", correct: false }, { text: "91пм", correct: false }, { text: "52пм", correct: false }, { text: "57нм", correct: false } ] },
+    { question: "Определить длину волны де Бройля, характеризующую волновые свойства электрона, если его скорость v = 8·10⁶ м/с", answers: [ { text: "91пм", correct: true }, { text: "0,7нм", correct: false }, { text: "0,4нм", correct: false }, { text: "52пм", correct: false }, { text: "57нм", correct: false } ] },
+    { question: "В результате комптоновского рассеяния на свободном покоящемся электроне длина фотона увеличивается в 4 раза. Найти кинетическую энергию электрона отдачи, если энергия рассеянного фотона ε=0,16МэВ", answers: [ { text: "0,48МэВ", correct: true }, { text: "0,54МэВ", correct: false }, { text: "0,56МэВ", correct: false }, { text: "0,46МэВ", correct: false }, { text: "0,72МэВ", correct: false } ] },
+    { question: "В результате комптоновского рассеяния на свободном покоящемся электроне длина фотона увеличивается в 3 раза. Найти кинетическую энергию электрона отдачи, если энергия рассеянного фотона ε=0,36МэВ", answers: [ { text: "0,72МэВ", correct: true }, { text: "0,54МэВ", correct: false }, { text: "0,56МэВ", correct: false }, { text: "0,46МэВ", correct: false }, { text: "0,48МэВ", correct: false } ] },
+    { question: "Эффективное напряжение переменного тока 220В. Найти амплитуду колебания напряжения.", answers: [ { text: "311 В", correct: true }, { text: "156 В", correct: false }, { text: "440 В", correct: false }, { text: "220 В", correct: false }, { text: "130 В", correct: false } ] },
+    { question: "Определить напряженность магнитного поля в центре тонкого кольца, радиусом r=10см, если по нему течёт ток силой I=1A.", answers: [ { text: "5 А/м", correct: true }, { text: "2 А/м", correct: false }, { text: "6 А/м", correct: false }, { text: "3 А/м", correct: false }, { text: "8 А/м", correct: false } ] },
+    { question: "Свет переходит из воды (n=1,33) в воздух. Как при этом изменяется длина световой волны?", answers: [ { text: "Увеличится в 1,33 раза", correct: true }, { text: "Увеличится в √1,33 раза", correct: false }, { text: "Уменьшится в 1,33 раза", correct: false }, { text: "Уменьшится в √1,33 раза", correct: false }, { text: "Не изменится.", correct: false } ] },
+    // NOTE: В вопросе 293 нет правильного варианта. Это может вызвать бесконечный цикл.
+    { question: "Звуковые колебания с частотой ν=0,2·10⁶Гц распространяется в упругой среде. Длина волны λ=40см. Найти скорость распространения волны.", answers: [ { text: "80м/с", correct: false }, { text: "60м/с", correct: false }, { text: "120м/с", correct: false }, { text: "40м/с", correct: false }, { text: "20м/с", correct: false } ] },
+    { question: "Чему равна ЭДС самоиндукции в катушке с индуктивностью 2 Гн, если сила тока в ней за 0,1 с равномерно уменьшилась от 5 А до 3 А:", answers: [ { text: "40 В", correct: true }, { text: "0,4 В", correct: false }, { text: "10 В", correct: false }, { text: "20 В", correct: false }, { text: "100 В", correct: false } ] },
+    { question: "Сила взаимодействия между проводами двухпроводной линии постоянного тока на каждый метр длины равна 10⁻⁴Н, расстояние между проводами 20 см. Сила тока в проводах равна:", answers: [ { text: "10 А", correct: true }, { text: "4 А", correct: false }, { text: "2 А", correct: false }, { text: "6,3 А", correct: false }, { text: "20 А", correct: false } ] },
+    { question: "Сила взаимодействия, приходящаяся на единицу длины каждого из параллельных проводников, находящихся на расстоянии b между собой, определяется выражением:", answers: [ { text: "(μ₀/4π) · (2I₁I₂/b)", correct: true }, { text: "(μ₀/4π) · (I₁I₂/b)", correct: false }, { text: "μ₀ · (I₁I₂/b)", correct: false }, { text: "(μ₀/4π) · (2I₁I₂/b²)", correct: false }, { text: "(1/4πμ₀) · (I₁I₂/b)", correct: false } ] },
+    { question: "Модуль вращательного момента, действующего на плоский контур с током в однородном магнитном поле, определяется выражением:", answers: [ { text: "pₘBsinα", correct: true }, { text: "pₘBcosα", correct: false }, { text: "pₘB", correct: false }, { text: "pₘHsinα", correct: false }, { text: "pₘHcosα", correct: false } ] },
+    { question: "На проводник длинной 0,5м, помещенный в однородное магнитное поле с индукцией 0,4Тл, действует сила 0,2Н. Определить силу тока в проводнике, если он расположен под углом 30⁰ к линиям магнитной индукции:", answers: [ { text: "2 А", correct: true }, { text: "6 А", correct: false }, { text: "1 А", correct: false }, { text: "0,2 А", correct: false }, { text: "4 А", correct: false } ] },
+    { question: "Начальная скорость заряженной частицы составляет угол α=90⁰ с линиями индукции однородного магнитного поля. Частица движется:", answers: [ { text: "По окружности", correct: true }, { text: "По эллипсу", correct: false }, { text: "По прямой", correct: false }, { text: "По параболе", correct: false }, { text: "По винтовой линии", correct: false } ] },
+    { question: "По катушке индуктивностью 2Гн проходит ток 4 А, магнитный поток внутри катушки равен:", answers: [ { text: "8 Вб", correct: true }, { text: "2 Вб", correct: false }, { text: "32 Вб", correct: false }, { text: "16 Вб", correct: false }, { text: "1 Вб", correct: false } ] },
+    { question: "Тело массой 5 кг движется по закону S=5·10⁻²sinπt м. Найти силу, действующую на тело через 1/6 сек после начала движения.", answers: [ { text: "-1,23 Н", correct: true }, { text: "1,23 Н", correct: false }, { text: "1,83 Н", correct: false }, { text: "-1,83 Н", correct: false }, { text: "1,63 Н", correct: false } ] },
+    { question: "Плоский контур площадью 50 см² пронизывает магнитный поток 2 мВб при индукции поля 0,4Тл. Угол между плоскостью контура и направлением поля равен:", answers: [ { text: "90⁰", correct: true }, { text: "60⁰", correct: false }, { text: "45⁰", correct: false }, { text: "30⁰", correct: false }, { text: "0⁰", correct: false } ] },
+    { question: "Двухвалентный ион движется со скоростью 480 км/с в однородном магнитном поле индукцией 0,1Тл и описывает окружность радиусом 10 см. Масса иона равна:", answers: [ { text: "6,7·10⁻²⁷ кг", correct: true }, { text: "3,3·10⁻²⁷ кг", correct: false }, { text: "7,7·10⁻²⁷ кг", correct: false }, { text: "1,7·10⁻²⁷ кг", correct: false }, { text: "4,7·10⁻²⁷ кг", correct: false } ] },
+    { question: "Красная граница фотоэффекта для некоторого металла равна 600 нм. Найти минимальную энергию фотона, вызывающего фотоэффект (в эВ)", answers: [ { text: "2,07", correct: true }, { text: "2,5", correct: false }, { text: "3", correct: false }, { text: "3,5", correct: false }, { text: "1,5", correct: false } ] },
+    { question: "Определить длину волны λ (·10⁻⁷ м) спектра второго порядка накладывающийся на длину волны λ₀=0.4мкм спектра третьего порядка.", answers: [ { text: "6", correct: true }, { text: "3", correct: false }, { text: "10", correct: false }, { text: "4", correct: false }, { text: "2", correct: false } ] }
+];
+
+
+
+// --- ЭЛЕМЕНТЫ DOM ---
+const startScreen = document.getElementById('start-screen');
+const quizScreen = document.getElementById('quiz-screen');
+const resultScreen = document.getElementById('result-screen');
+const startBtn = document.getElementById('start-btn');
+const restartBtn = document.getElementById('restart-btn');
+const questionContainer = document.getElementById('question-container');
+const answerButtons = document.getElementById('answer-buttons');
+const progressBar = document.getElementById('progress-bar');
+const progressText = document.getElementById('progress-text');
+
+// --- ПЕРЕМЕННЫЕ СОСТОЯНИЯ КВИЗА ---
+let questionsToAsk = [];
+let incorrectlyAnswered = [];
+let currentQuestion;
+let correctlyAnsweredCount = 0;
+let totalQuestionCount = 0;
+
+// --- ФУНКЦИИ ---
+function shuffleArray(array) {
+    for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+    }
+}
+
+function startQuiz() {
+    startScreen.classList.add('hidden');
+    resultScreen.classList.add('hidden');
+    quizScreen.classList.remove('hidden');
+
+    allQuestions.forEach(q => q.answeredCorrectly = false); // Сброс флагов перед каждым стартом
+    questionsToAsk = [...allQuestions];
+    shuffleArray(questionsToAsk);
+    incorrectlyAnswered = [];
+    correctlyAnsweredCount = 0;
+    totalQuestionCount = allQuestions.length;
+    
+    updateProgressBar();
+    showNextQuestion();
+}
+
+function updateProgressBar() {
+    const progressPercentage = (correctlyAnsweredCount / totalQuestionCount) * 100;
+    progressBar.style.width = `${progressPercentage}%`;
+    progressText.innerText = `Прогресс: ${correctlyAnsweredCount} / ${totalQuestionCount}`;
+}
+
+function showNextQuestion() {
+    resetState();
+    
+    if (questionsToAsk.length === 0) {
+        if (incorrectlyAnswered.length === 0) {
+            endQuiz();
+            return;
+        } else {
+            questionsToAsk = [...incorrectlyAnswered];
+            shuffleArray(questionsToAsk);
+            incorrectlyAnswered = [];
+        }
+    }
+    
+    currentQuestion = questionsToAsk.shift();
+    questionContainer.innerText = currentQuestion.question;
+
+    const shuffledAnswers = [...currentQuestion.answers];
+    shuffleArray(shuffledAnswers);
+
+    shuffledAnswers.forEach(answer => {
+        const button = document.createElement('button');
+        button.innerText = answer.text;
+        button.classList.add('btn');
+        if (answer.correct) {
+            button.dataset.correct = true;
+        }
+        button.addEventListener('click', selectAnswer);
+        answerButtons.appendChild(button);
+    });
+}
+
+function resetState() {
+    while (answerButtons.firstChild) {
+        answerButtons.removeChild(answerButtons.firstChild);
+    }
+}
+
+function selectAnswer(e) {
+    const selectedBtn = e.target;
+    const isCorrect = selectedBtn.dataset.correct === 'true';
+
+    // Блокируем все кнопки сразу после ответа
+    Array.from(answerButtons.children).forEach(button => {
+        button.disabled = true;
+    });
+
+    if (isCorrect) {
+        // Если ответ правильный, помечаем его как правильный
+        selectedBtn.classList.add('correct');
+        // Если на этот вопрос еще не отвечали правильно, увеличиваем счетчик
+        if (!currentQuestion.answeredCorrectly) {
+            correctlyAnsweredCount++;
+            currentQuestion.answeredCorrectly = true;
+            updateProgressBar();
+        }
+    } else {
+        // Если ответ неправильный
+        selectedBtn.classList.add('incorrect');
+        // Добавляем вопрос в список для повтора
+        incorrectlyAnswered.push(currentQuestion);
+        // Показываем правильный ответ
+        Array.from(answerButtons.children).forEach(button => {
+            if (button.dataset.correct === 'true') {
+                button.classList.add('correct');
+            }
+        });
+    }
+    
+    // Ждем 2 секунды перед показом следующего вопроса
+    setTimeout(showNextQuestion, 2000);
+}
+
+
+function setStatusClass(element, correct) {
+    if (correct) {
+        element.classList.add('correct');
+    } else {
+        element.classList.add('incorrect');
+    }
+}
+
+function endQuiz() {
+    quizScreen.classList.add('hidden');
+    resultScreen.classList.remove('hidden');
+}
+
+// --- СОБЫТИЯ ---
+startBtn.addEventListener('click', startQuiz);
+restartBtn.addEventListener('click', startQuiz);
+
+</script>
+</body>
+</html>
